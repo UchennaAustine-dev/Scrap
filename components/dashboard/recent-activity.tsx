@@ -23,7 +23,7 @@ export function RecentActivity() {
               <span className="text-slate-300">{activity.date}</span>
               <span className="text-slate-300">{activity.scraper}</span>
               <span
-                className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                className={`px-2 py-1 rounded-full text-xs font-medium text-center flex items-center justify-center ${getStatusColor(
                   activity.status
                 )}`}
               >

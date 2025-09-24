@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Settings, User, Search, Menu } from "lucide-react";
+import { Bell, Settings, User, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -50,8 +50,8 @@ export function Header({ title, description }: HeaderProps) {
       {/* Main header content */}
       <div className="px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between gap-2 sm:gap-4">
-          {/* Left side - Title (responsive) */}
-          <div className="flex-1 min-w-0 max-w-[40%] sm:max-w-none">
+          {/* Left side - Title with proper spacing for mobile menu */}
+          <div className="flex-1 min-w-0 max-w-full sm:max-w-none pl-12 lg:pl-0">
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-white truncate">
               {title}
             </h1>
@@ -130,7 +130,7 @@ export function Header({ title, description }: HeaderProps) {
               </DropdownMenuTrigger>
 
               <DropdownMenuContent
-                className="w-48 sm:w-56 bg-slate-800 border-slate-700"
+                className="w-48 sm:w-56 bg-slate-800 border-slate-700 z-50"
                 align="end"
                 forceMount
               >
@@ -178,7 +178,7 @@ export function Header({ title, description }: HeaderProps) {
       {/* Mobile search (collapsible) */}
       {isSearchOpen && (
         <div className="lg:hidden px-4 sm:px-6 pb-3 sm:pb-4 border-t border-slate-700/50">
-          <div className="relative">
+          <div className="relative ml-12 lg:ml-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               type="text"
@@ -193,7 +193,9 @@ export function Header({ title, description }: HeaderProps) {
       {/* Mobile description (shown when search is closed) */}
       {description && !isSearchOpen && (
         <div className="sm:hidden px-4 pb-3 border-t border-slate-700/50">
-          <p className="text-xs text-slate-400 truncate">{description}</p>
+          <p className="text-xs text-slate-400 truncate pl-12 lg:pl-0">
+            {description}
+          </p>
         </div>
       )}
     </header>
