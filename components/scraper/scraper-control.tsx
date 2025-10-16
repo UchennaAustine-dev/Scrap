@@ -55,7 +55,50 @@ export function ScraperControl() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+      {/* Page Header */}
+      <div className="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">
+            Scraper Control
+          </h1>
+          <p className="text-slate-400 text-sm mt-1">
+            Configure and manage your web scrapers
+          </p>
+        </div>
+      </div>
+
+      {/* Running Status Banner */}
+      {isRunning && (
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 flex items-center gap-3">
+          <div className="flex-shrink-0">
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+          </div>
+          <div className="flex-1">
+            <p className="text-blue-400 font-medium">Scraper is running</p>
+            <p className="text-blue-300 text-sm">
+              {scrapeStatus?.current_run?.sites
+                ? `Scraping: ${
+                    Array.isArray(scrapeStatus.current_run.sites)
+                      ? scrapeStatus.current_run.sites.join(", ")
+                      : scrapeStatus.current_run.sites
+                  }`
+                : "Check Run Console below for live logs"}
+            </p>
+          </div>
+          <div className="text-blue-400 text-sm">
+            {scrapeStatus?.current_run?.started_at && (
+              <span>
+                Started{" "}
+                {new Date(
+                  scrapeStatus.current_run.started_at
+                ).toLocaleTimeString()}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Control Buttons */}
       <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
         <Button
@@ -102,7 +145,10 @@ export function ScraperControl() {
       />
 
       {/* Run Console & Logs */}
-      <RunConsole isRunning={isRunning} scrapeStatus={scrapeStatus} />
+      <RunConsole
+        isRunning={isRunning}
+        scrapeStatus={scrapeStatus || undefined}
+      />
 
       {/* Notifications & Alerts */}
       <NotificationsAlerts />

@@ -11,6 +11,7 @@ import {
   Trash2,
   Power,
   PowerOff,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,6 +26,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SiteLogsModal } from "./site-logs-modal";
+import { SiteDetailsModal } from "./site-details-modal";
 
 interface SiteConfigurationProps {
   onAddSite: () => void;
@@ -32,27 +35,40 @@ interface SiteConfigurationProps {
   onSelectedSitesChange: (sites: string[]) => void;
 }
 
-export function SiteConfiguration({ 
-  onAddSite, 
-  selectedSites, 
-  onSelectedSitesChange 
+export function SiteConfiguration({
+  onAddSite,
+  selectedSites,
+  onSelectedSitesChange,
 }: SiteConfigurationProps) {
-  const { data: sitesData, loading, error, refetch } = useApi<SiteListResponse>(
-    () => sitesApi.list()
-  );
+  const [logsSiteKey, setLogsSiteKey] = useState<string | null>(null);
+  const [isLogsOpen, setIsLogsOpen] = useState(false);
+  const [editSiteKey, setEditSiteKey] = useState<string | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const {
+    data: sitesData,
+    loading,
+    error,
+    refetch,
+  } = useApi<SiteListResponse>(() => sitesApi.list());
 
   const sites = sitesData?.sites || [];
 
-  const toggleSiteMutation = useApiMutation((siteKey: string) => 
+  const toggleSiteMutation = useApiMutation((siteKey: string) =>
     sitesApi.toggle(siteKey)
   );
 
-  const deleteSiteMutation = useApiMutation((siteKey: string) => 
+  const deleteSiteMutation = useApiMutation((siteKey: string) =>
     sitesApi.delete(siteKey)
   );
 
   const handleEdit = (siteKey: string) => {
-    toast.info(`Editing site ${siteKey}`);
+    setEditSiteKey(siteKey);
+    setIsEditOpen(true);
+  };
+
+  const handleViewLogs = (siteKey: string) => {
+    setLogsSiteKey(siteKey);
+    setIsLogsOpen(true);
   };
 
   const handleDelete = async (siteKey: string) => {
@@ -77,7 +93,7 @@ export function SiteConfiguration({
 
   const handleToggleSelection = (siteKey: string) => {
     const newSelected = selectedSites.includes(siteKey)
-      ? selectedSites.filter(key => key !== siteKey)
+      ? selectedSites.filter((key) => key !== siteKey)
       : [...selectedSites, siteKey];
     onSelectedSitesChange(newSelected);
   };
@@ -116,37 +132,55 @@ export function SiteConfiguration({
 
   return (
     <div className="bg-slate-800 rounded-lg border border-slate-700">
-      <div className="p-4 sm:p-6 border-b border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h3 className="text-lg font-semibold text-white">Site Configuration</h3>
-        <Button
-          onClick={onAddSite}
-          className="bg-blue-500 hover:bg-blue-600 flex items-center justify-center space-x-2 w-full sm:w-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Site</span>
-        </Button>
+      <div className="p-4 sm:p-6 border-b border-slate-700">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <h3 className="text-lg font-semibold text-white">
+            Site Configuration
+          </h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              onClick={() => {
+                refetch();
+                toast.success("Sites list refreshed");
+              }}
+              variant="outline"
+              size="sm"
+              className="border-slate-600 text-slate-300 hover:bg-slate-700 flex items-center space-x-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+            <Button
+              onClick={onAddSite}
+              className="bg-blue-500 hover:bg-blue-600 flex items-center justify-center space-x-2 flex-1 sm:flex-initial"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add New Site</span>
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Mobile Card View */}
       <div className="block sm:hidden">
         <div className="divide-y divide-slate-700">
           {sites.map((site) => (
-            <div key={site.id} className="p-4 space-y-3">
+            <div key={site.site_key} className="p-4 space-y-3">
               <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3 flex-1 min-w-0">
-                    <Checkbox
-                      checked={selectedSites.includes(site.site_key)}
-                      onCheckedChange={() => handleToggleSelection(site.site_key)}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-medium truncate">
-                        {site.name}
-                      </p>
-                      <p className="text-slate-400 text-sm truncate">
-                        {site.site_key}
-                      </p>
-                    </div>
+                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                  <Checkbox
+                    checked={selectedSites.includes(site.site_key)}
+                    onCheckedChange={() => handleToggleSelection(site.site_key)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium truncate">
+                      {site.name}
+                    </p>
+                    <p className="text-slate-400 text-sm truncate">
+                      {site.site_key}
+                    </p>
                   </div>
+                </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -157,6 +191,12 @@ export function SiteConfiguration({
                     align="end"
                     className="bg-slate-700 border-slate-600"
                   >
+                    <DropdownMenuItem
+                      onClick={() => handleViewLogs(site.site_key)}
+                      className="text-slate-300 focus:bg-slate-600"
+                    >
+                      Logs
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => handleEdit(site.site_key)}
                       className="text-slate-300 focus:bg-slate-600"
@@ -194,9 +234,7 @@ export function SiteConfiguration({
               <div className="grid grid-cols-1 gap-2 text-sm">
                 <div>
                   <span className="text-slate-400">URL: </span>
-                  <span className="text-slate-300 break-all">
-                    {site.url}
-                  </span>
+                  <span className="text-slate-300 break-all">{site.url}</span>
                 </div>
                 <div>
                   <span className="text-slate-400">Parser: </span>
@@ -208,10 +246,10 @@ export function SiteConfiguration({
                     {getStatusIcon(site.enabled)}
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        site.enabled ? 'enabled' : 'disabled'
+                        site.enabled ? "enabled" : "disabled"
                       )}`}
                     >
-                      {site.enabled ? 'Enabled' : 'Disabled'}
+                      {site.enabled ? "Enabled" : "Disabled"}
                     </span>
                   </div>
                 </div>
@@ -253,13 +291,13 @@ export function SiteConfiguration({
                   <div className="flex items-center space-x-3">
                     <Checkbox
                       checked={selectedSites.includes(site.site_key)}
-                      onCheckedChange={() => handleToggleSelection(site.site_key)}
+                      onCheckedChange={() =>
+                        handleToggleSelection(site.site_key)
+                      }
                     />
                     <div>
                       <p className="text-white font-medium">{site.name}</p>
-                      <p className="text-slate-400 text-sm">
-                        {site.site_key}
-                      </p>
+                      <p className="text-slate-400 text-sm">{site.site_key}</p>
                     </div>
                   </div>
                 </td>
@@ -270,15 +308,23 @@ export function SiteConfiguration({
                     {getStatusIcon(site.enabled)}
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        site.enabled ? 'enabled' : 'disabled'
+                        site.enabled ? "enabled" : "disabled"
                       )}`}
                     >
-                      {site.enabled ? 'Enabled' : 'Disabled'}
+                      {site.enabled ? "Enabled" : "Disabled"}
                     </span>
                   </div>
                 </td>
                 <td className="p-4">
                   <div className="flex items-center space-x-2">
+                    <Button
+                      onClick={() => handleViewLogs(site.site_key)}
+                      variant="ghost"
+                      size="sm"
+                      className="text-slate-300 hover:text-white hover:bg-slate-600/30"
+                    >
+                      Logs
+                    </Button>
                     <Button
                       onClick={() => handleEdit(site.site_key)}
                       variant="ghost"
@@ -293,7 +339,7 @@ export function SiteConfiguration({
                       size="sm"
                       className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
                     >
-                      {site.enabled ? 'Disable' : 'Enable'}
+                      {site.enabled ? "Disable" : "Enable"}
                     </Button>
                   </div>
                 </td>
@@ -302,6 +348,19 @@ export function SiteConfiguration({
           </tbody>
         </table>
       </div>
+      {/* Site Logs Modal */}
+      <SiteLogsModal
+        siteKey={logsSiteKey}
+        isOpen={isLogsOpen}
+        onClose={() => setIsLogsOpen(false)}
+      />
+      {/* Site Details/Edit Modal */}
+      <SiteDetailsModal
+        siteKey={editSiteKey}
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        onSaved={() => refetch()}
+      />
     </div>
   );
 }

@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { logsApi, scrapeApi } from "@/lib/api";
 import { useApi, usePolling } from "@/lib/hooks/useApi";
 import { ScrapeStatus, LogEntry } from "@/lib/types";
+import { toast } from "sonner";
 
 interface RunConsoleProps {
   isRunning: boolean;
@@ -12,10 +15,14 @@ interface RunConsoleProps {
 
 export function RunConsole({ isRunning, scrapeStatus }: RunConsoleProps) {
   const [activeTab, setActiveTab] = useState("current");
+  const [forceRefresh, setForceRefresh] = useState(0);
 
   // Poll for logs when running with stable function references
-  const getCurrentLogs = useCallback(() => logsApi.getLogs({ limit: 50 }), []);
-  const getErrorLogs = useCallback(() => logsApi.getErrors(20), []);
+  const getCurrentLogs = useCallback(
+    () => logsApi.getLogs({ limit: 50 }),
+    [forceRefresh]
+  );
+  const getErrorLogs = useCallback(() => logsApi.getErrors(20), [forceRefresh]);
 
   const { data: currentLogs } = usePolling<LogEntry[]>(
     getCurrentLogs,
@@ -29,7 +36,18 @@ export function RunConsole({ isRunning, scrapeStatus }: RunConsoleProps) {
     isRunning
   );
 
-  const { data: historyData } = useApi(() => scrapeApi.history(10));
+  const { data: historyData, refetch: refetchHistory } = useApi(() =>
+    scrapeApi.history(10)
+  );
+
+  const handleRefresh = () => {
+    if (activeTab === "history") {
+      refetchHistory();
+    } else {
+      setForceRefresh((prev) => prev + 1);
+    }
+    toast.success("Logs refreshed");
+  };
 
   // Ensure logs are always arrays
   const currentLogsArray = Array.isArray(currentLogs)
@@ -55,7 +73,20 @@ export function RunConsole({ isRunning, scrapeStatus }: RunConsoleProps) {
   return (
     <div className="bg-slate-800 rounded-lg border border-slate-700">
       <div className="p-4 sm:p-6 border-b border-slate-700">
-        <h3 className="text-lg font-semibold text-white">Run Console & Logs</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-white">
+            Run Console & Logs
+          </h3>
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            size="sm"
+            className="border-slate-600 text-slate-300 hover:bg-slate-700 flex items-center space-x-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Tabs - Scrollable */}
