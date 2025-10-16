@@ -20,6 +20,7 @@ import { toast } from "sonner";
 interface SidebarProps {
   currentPage: string;
   onPageChange: (page: string) => void;
+  onLogout?: () => void;
 }
 
 // Navigation configuration with descriptions and badges
@@ -60,7 +61,7 @@ const footerNavigation = [
   { name: "Sign Out", icon: LogOut, action: "logout" },
 ];
 
-export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
+export function Sidebar({ currentPage, onPageChange, onLogout }: SidebarProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -79,17 +80,23 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
   );
 
   // Handle footer actions
-  const handleFooterAction = useCallback((action: string) => {
-    switch (action) {
-      case "help":
-        toast.info("Help documentation will open soon");
-        break;
-      case "logout":
-        toast.info("Logging out...");
-        // Handle logout logic
-        break;
-    }
-  }, []);
+  const handleFooterAction = useCallback(
+    (action: string) => {
+      switch (action) {
+        case "help":
+          toast.info("Help documentation will open soon");
+          break;
+        case "logout":
+          if (onLogout) {
+            onLogout();
+          } else {
+            toast.info("Logging out...");
+          }
+          break;
+      }
+    },
+    [onLogout]
+  );
 
   // Sidebar content component
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (

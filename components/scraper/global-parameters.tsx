@@ -11,11 +11,23 @@ import {
 import { Input } from "@/components/ui/input";
 import type { GlobalParameters as GlobalParametersType } from "@/lib/types";
 
-export function GlobalParameters() {
+interface GlobalParametersProps {
+  maxPages?: number;
+  onMaxPagesChange?: (value: number | undefined) => void;
+  geocoding?: boolean;
+  onGeocodingChange?: (value: boolean | undefined) => void;
+}
+
+export function GlobalParameters({
+  maxPages,
+  onMaxPagesChange,
+  geocoding,
+  onGeocodingChange,
+}: GlobalParametersProps) {
   const [parameters, setParameters] = useState<GlobalParametersType>({
     headless: true,
-    maxPagesPerSite: 100,
-    geocoding: true,
+    maxPagesPerSite: maxPages || 100,
+    geocoding: geocoding !== undefined ? geocoding : true,
     retryStrategy: "Exponential Backoff",
     proxyPool: "Residential",
     exportFormat: "CSV",
@@ -23,6 +35,14 @@ export function GlobalParameters() {
 
   const updateParameter = (key: keyof GlobalParametersType, value: any) => {
     setParameters((prev) => ({ ...prev, [key]: value }));
+
+    // Update parent component
+    if (key === "maxPagesPerSite" && onMaxPagesChange) {
+      onMaxPagesChange(value);
+    }
+    if (key === "geocoding" && onGeocodingChange) {
+      onGeocodingChange(value);
+    }
   };
 
   return (

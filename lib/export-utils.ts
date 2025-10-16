@@ -24,13 +24,13 @@ export async function exportToCSV(
       [
         `"${property.title}"`,
         property.price,
-        property.pricePerSqm,
+        property.price_per_sqm || "",
         `"${property.location}"`,
-        property.bedrooms,
-        property.bathrooms,
-        `"${property.type}"`,
-        `"${property.source}"`,
-        `"${property.timestamp}"`,
+        property.bedrooms || "",
+        property.bathrooms || "",
+        `"${property.type || ""}"`,
+        `"${property.source || ""}"`,
+        `"${property.timestamp || ""}"`,
       ].join(",")
     ),
   ].join("\n");
@@ -57,13 +57,13 @@ export async function exportToXLSX(
     data.map((property) => ({
       Title: property.title,
       Price: property.price,
-      "Price per SQM": property.pricePerSqm,
+      "Price per SQM": property.price_per_sqm || "",
       Location: property.location,
-      Bedrooms: property.bedrooms,
-      Bathrooms: property.bathrooms,
-      Type: property.type,
-      Source: property.source,
-      Timestamp: property.timestamp,
+      Bedrooms: property.bedrooms || "",
+      Bathrooms: property.bathrooms || "",
+      Type: property.type || "",
+      Source: property.source || "",
+      Timestamp: property.timestamp || "",
     }))
   );
 
@@ -147,20 +147,22 @@ export async function exportToPDF(
       property.title.length > 30
         ? property.title.substring(0, 30) + "..."
         : property.title,
-      `$${property.price.toLocaleString()}`,
+      typeof property.price === "number"
+        ? `$${property.price.toLocaleString()}`
+        : `${property.price}`,
       property.location.length > 25
         ? property.location.substring(0, 25) + "..."
         : property.location,
-      property.bedrooms.toString(),
-      property.bathrooms.toString(),
-      property.type,
-      property.source.length > 20
-        ? property.source.substring(0, 20) + "..."
-        : property.source,
+      (property.bedrooms || 0).toString(),
+      (property.bathrooms || 0).toString(),
+      property.type || "",
+      (property.source || "").length > 20
+        ? (property.source || "").substring(0, 20) + "..."
+        : property.source || "",
     ];
 
     rowData.forEach((cell, cellIndex) => {
-      pdf.text(cell, currentX, currentY);
+      pdf.text(cell || "", currentX, currentY);
       currentX += colWidths[cellIndex];
     });
 
@@ -190,7 +192,7 @@ export function formatPropertyForExport(property: Property) {
   return {
     title: property.title,
     price: property.price,
-    pricePerSqm: property.pricePerSqm,
+    pricePerSqm: property.price_per_sqm,
     location: property.location,
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,

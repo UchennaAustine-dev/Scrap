@@ -1,35 +1,50 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { logsApi, scrapeApi } from "@/lib/api";
+import { useApi, usePolling } from "@/lib/hooks/useApi";
+import { ScrapeStatus, LogEntry } from "@/lib/types";
 
 interface RunConsoleProps {
   isRunning: boolean;
+  scrapeStatus?: ScrapeStatus;
 }
 
-export function RunConsole({ isRunning }: RunConsoleProps) {
+export function RunConsole({ isRunning, scrapeStatus }: RunConsoleProps) {
   const [activeTab, setActiveTab] = useState("current");
-  const [logs, setLogs] = useState<string[]>([
-    "> Initializing scraper...",
-    "> Connecting to proxy pool...",
-    "> Connection successful.",
-    "> Starting run for 'Site Three'...",
-    "> Console messages will appear here during a run...",
-  ]);
 
-  useEffect(() => {
-    if (isRunning) {
-      const interval = setInterval(() => {
-        setLogs((prev) => [
-          ...prev,
-          `> [${new Date().toLocaleTimeString()}] Processing page ${
-            Math.floor(Math.random() * 100) + 1
-          }...`,
-        ]);
-      }, 2000);
+  // Poll for logs when running with stable function references
+  const getCurrentLogs = useCallback(() => logsApi.getLogs({ limit: 50 }), []);
+  const getErrorLogs = useCallback(() => logsApi.getErrors(20), []);
 
-      return () => clearInterval(interval);
-    }
-  }, [isRunning]);
+  const { data: currentLogs } = usePolling<LogEntry[]>(
+    getCurrentLogs,
+    5000, // Poll every 5 seconds to reduce load
+    isRunning
+  );
+
+  const { data: errorLogs } = usePolling<LogEntry[]>(
+    getErrorLogs,
+    10000, // Poll every 10 seconds to reduce load
+    isRunning
+  );
+
+  const { data: historyData } = useApi(() => scrapeApi.history(10));
+
+  // Ensure logs are always arrays
+  const currentLogsArray = Array.isArray(currentLogs)
+    ? currentLogs
+    : (currentLogs as any)?.logs || [];
+
+  const errorLogsArray = Array.isArray(errorLogs)
+    ? errorLogs
+    : (errorLogs as any)?.logs || [];
+
+  const formatLogEntry = (log: LogEntry) => {
+    const timestamp = new Date(log.timestamp).toLocaleTimeString();
+    const sitePrefix = log.site_key ? `[${log.site_key}] ` : "";
+    return `> [${timestamp}] ${sitePrefix}${log.message}`;
+  };
 
   const tabs = [
     { id: "current", label: "Current Run" },
@@ -67,11 +82,20 @@ export function RunConsole({ isRunning }: RunConsoleProps) {
         <div className="bg-slate-900 rounded-lg p-3 sm:p-4 h-48 sm:h-64 overflow-y-auto font-mono text-xs sm:text-sm">
           {activeTab === "current" && (
             <div className="space-y-1">
-              {logs.map((log, index) => (
-                <div key={index} className="text-green-400 break-all">
-                  {log}
+              {currentLogsArray.length > 0 ? (
+                currentLogsArray.map((log: LogEntry, index: number) => (
+                  <div
+                    key={`log-${index}`}
+                    className="text-green-400 break-all"
+                  >
+                    {formatLogEntry(log)}
+                  </div>
+                ))
+              ) : (
+                <div className="text-slate-400">
+                  {isRunning ? "Loading logs..." : "No recent logs"}
                 </div>
-              ))}
+              )}
               {isRunning && (
                 <div className="text-blue-400 animate-pulse">
                   {"> Running..."}
@@ -82,29 +106,39 @@ export function RunConsole({ isRunning }: RunConsoleProps) {
 
           {activeTab === "errors" && (
             <div className="space-y-1">
-              <div className="text-red-400 break-all">
-                • [2024-01-15 09:00] Error: Connection timeout for site-two.com
-              </div>
-              <div className="text-red-400 break-all">
-                • [2024-01-14 15:30] Error: Rate limit exceeded
-              </div>
-              <div className="text-red-400 break-all">
-                • [2024-01-14 12:15] Error: Invalid selector for price element
-              </div>
+              {errorLogsArray.length > 0 ? (
+                errorLogsArray.map((log: LogEntry, index: number) => (
+                  <div
+                    key={`error-${index}`}
+                    className="text-red-400 break-all"
+                  >
+                    • {formatLogEntry(log)}
+                  </div>
+                ))
+              ) : (
+                <div className="text-slate-400">No recent errors</div>
+              )}
             </div>
           )}
 
           {activeTab === "history" && (
             <div className="space-y-1">
-              <div className="text-slate-300 break-all">
-                • [2024-01-15 10:00] Run completed successfully - 1,234 records
-              </div>
-              <div className="text-slate-300 break-all">
-                • [2024-01-14 14:30] Run completed with errors - 856 records
-              </div>
-              <div className="text-slate-300 break-all">
-                • [2024-01-14 09:15] Run completed successfully - 2,145 records
-              </div>
+              {historyData?.history?.map((run: any, index: number) => (
+                <div
+                  key={`history-${index}`}
+                  className="text-slate-300 break-all"
+                >
+                  • [
+                  {new Date(run.timestamp || run.started_at).toLocaleString()}]
+                  {run.success
+                    ? "Run completed successfully"
+                    : "Run completed with errors"}
+                  {run.count && ` - ${run.count} records`}
+                  {run.site_key && ` (${run.site_key})`}
+                </div>
+              )) || (
+                <div className="text-slate-400">No run history available</div>
+              )}
             </div>
           )}
         </div>

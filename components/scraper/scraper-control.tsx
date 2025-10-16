@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Play, Square, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SiteConfiguration } from "./site-configuration";
@@ -9,18 +9,44 @@ import { RunConsole } from "./run-console";
 import { NotificationsAlerts } from "./notifications-alerts";
 import { AddSiteModal } from "./add-site-modal";
 import { toast } from "sonner";
+import { scrapeApi } from "@/lib/api";
+import { useApi, usePolling } from "@/lib/hooks/useApi";
+import { ScrapeStatus } from "@/lib/types";
 
 export function ScraperControl() {
-  const [isRunning, setIsRunning] = useState(false);
   const [showAddSiteModal, setShowAddSiteModal] = useState(false);
+  const [selectedSites, setSelectedSites] = useState<string[]>([]);
+  const [maxPages, setMaxPages] = useState<number | undefined>();
+  const [geocoding, setGeocoding] = useState<boolean | undefined>();
 
-  const handleRunScraper = () => {
-    if (isRunning) {
-      setIsRunning(false);
-      toast.success("Scraper stopped successfully");
-    } else {
-      setIsRunning(true);
-      toast.success("Scraper started successfully");
+  // Poll for scraper status with stable function reference
+  const getScrapeStatus = useCallback(() => scrapeApi.status(), []);
+  const { data: scrapeStatus } = usePolling<ScrapeStatus>(
+    getScrapeStatus,
+    5000, // Poll every 5 seconds to reduce load
+    true
+  );
+
+  const isRunning = scrapeStatus?.is_running || false;
+
+  const handleRunScraper = async () => {
+    try {
+      if (isRunning) {
+        await scrapeApi.stop();
+        toast.success("Scraper stopped successfully");
+      } else {
+        const params: any = {};
+        if (selectedSites.length > 0) params.sites = selectedSites;
+        if (maxPages) params.max_pages = maxPages;
+        if (geocoding !== undefined) params.geocoding = geocoding;
+
+        await scrapeApi.start(params);
+        toast.success("Scraper started successfully");
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to control scraper"
+      );
     }
   };
 
@@ -61,13 +87,22 @@ export function ScraperControl() {
       </div>
 
       {/* Site Configuration */}
-      <SiteConfiguration onAddSite={() => setShowAddSiteModal(true)} />
+      <SiteConfiguration
+        onAddSite={() => setShowAddSiteModal(true)}
+        selectedSites={selectedSites}
+        onSelectedSitesChange={setSelectedSites}
+      />
 
       {/* Global Parameters */}
-      <GlobalParameters />
+      <GlobalParameters
+        maxPages={maxPages}
+        onMaxPagesChange={setMaxPages}
+        geocoding={geocoding}
+        onGeocodingChange={setGeocoding}
+      />
 
       {/* Run Console & Logs */}
-      <RunConsole isRunning={isRunning} />
+      <RunConsole isRunning={isRunning} scrapeStatus={scrapeStatus} />
 
       {/* Notifications & Alerts */}
       <NotificationsAlerts />

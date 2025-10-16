@@ -46,10 +46,16 @@ export default function DataTable({ properties }: DataTableProps) {
   if (properties.length === 0) {
     return (
       <div className="bg-slate-800 rounded-lg border border-slate-700 p-8 text-center">
-        <div className="text-slate-400 space-y-2">
+        <div className="text-slate-400 space-y-3">
           <Home className="h-12 w-12 mx-auto opacity-50" />
-          <p className="text-lg">No properties found</p>
-          <p className="text-sm">Try adjusting your filters or search terms</p>
+          <p className="text-lg font-medium">No properties found</p>
+          <p className="text-sm max-w-md mx-auto">
+            No data is available yet. Start by running a scraper to collect
+            property listings from configured sites.
+          </p>
+          <p className="text-xs text-slate-500 mt-4">
+            Go to "Scraper Control" to start collecting data
+          </p>
         </div>
       </div>
     );
@@ -124,10 +130,16 @@ export default function DataTable({ properties }: DataTableProps) {
                     </div>
                   </td>
                   <td className="p-4 text-slate-300 whitespace-nowrap font-semibold">
-                    {formatCurrency(property.price)}
+                    {formatCurrency(
+                      typeof property.price === "number"
+                        ? property.price
+                        : parseFloat(property.price) || 0
+                    )}
                   </td>
                   <td className="p-4 text-slate-300 whitespace-nowrap">
-                    {formatCurrency(property.pricePerSqm)}
+                    {property.price_per_sqm
+                      ? formatCurrency(property.price_per_sqm)
+                      : "N/A"}
                   </td>
                   <td className="p-4 text-slate-300 max-w-xs truncate">
                     {property.location}
@@ -147,7 +159,9 @@ export default function DataTable({ properties }: DataTableProps) {
                     {property.source}
                   </td>
                   <td className="p-4 text-slate-300 text-sm whitespace-nowrap">
-                    {formatDateTime(property.timestamp)}
+                    {property.timestamp
+                      ? formatDateTime(property.timestamp)
+                      : "N/A"}
                   </td>
                 </tr>
               ))}
@@ -177,10 +191,17 @@ export default function DataTable({ properties }: DataTableProps) {
                   </div>
                   <div className="text-right flex-shrink-0">
                     <div className="text-green-400 font-bold text-lg">
-                      {formatCurrency(property.price)}
+                      {formatCurrency(
+                        typeof property.price === "number"
+                          ? property.price
+                          : parseFloat(property.price) || 0
+                      )}
                     </div>
                     <div className="text-slate-400 text-sm">
-                      {formatCurrency(property.pricePerSqm)}/sqm
+                      {property.price_per_sqm
+                        ? formatCurrency(property.price_per_sqm)
+                        : "N/A"}
+                      /sqm
                     </div>
                   </div>
                 </div>
@@ -241,7 +262,11 @@ export default function DataTable({ properties }: DataTableProps) {
                 <div className="flex items-center justify-between pt-2 border-t border-slate-700">
                   <div className="flex items-center space-x-1 text-slate-400 text-xs">
                     <Calendar className="w-3 h-3" />
-                    <span>{formatDateTime(property.timestamp)}</span>
+                    <span>
+                      {property.timestamp
+                        ? formatDateTime(property.timestamp)
+                        : "N/A"}
+                    </span>
                   </div>
                   <Button
                     variant="ghost"

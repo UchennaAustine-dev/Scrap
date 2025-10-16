@@ -1,20 +1,41 @@
 "use client";
 
-import { useState } from "react";
-import { Download, FileText, Table, Search, Filter, X } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Download,
+  FileText,
+  Table,
+  Search,
+  Filter,
+  X,
+  RefreshCw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Property, FilterState } from "@/lib/types";
+import {
+  Property,
+  FilterState,
+  DataResponse,
+  SearchResponse,
+} from "@/lib/types";
 import { toast } from "sonner";
-import { mockProperties } from "@/lib/mockData";
+import { dataApi } from "@/lib/api";
+import { useApi } from "@/lib/hooks/useApi";
 import { exportToCSV, exportToXLSX, exportToPDF } from "@/lib/export-utils";
 import DataTable from "./data-table";
 import FilterSidebar from "./filter-sidebar";
 
 export default function DataExplorer() {
-  const [properties] = useState<Property[]>(mockProperties);
   const [searchTerm, setSearchTerm] = useState("");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [currentSite, setCurrentSite] = useState<string>("");
+  const [dataSource, setDataSource] = useState<"master" | "site" | "search">(
+    "master"
+  );
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [loading, setLoading] = useState(false);
+
   const [filters, setFilters] = useState<FilterState>({
     keyword: "",
     location: "",
@@ -27,6 +48,72 @@ export default function DataExplorer() {
     endDate: "",
     sourceSite: "",
   });
+
+  // Get available data files
+  const { data: dataFiles, refetch: refetchDataFiles } = useApi(() =>
+    dataApi.listFiles()
+  );
+
+  // Load data based on current source with debouncing
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (dataSource === "search" && searchTerm) {
+        const searchResults = await dataApi.search(searchTerm, {
+          fields: ["title", "location"],
+          limit: 100,
+        });
+        setProperties(searchResults.results?.map((r: any) => r.data) || []);
+        setTotalRecords(searchResults.total_results || 0);
+      } else if (dataSource === "site" && currentSite) {
+        const siteData = await dataApi.getSiteData(currentSite, {
+          limit: 100,
+          source: "cleaned",
+        });
+        setProperties(siteData.data || []);
+        setTotalRecords(siteData.total_records || 0);
+
+        // Show message if no data available
+        if (siteData.message && siteData.data?.length === 0) {
+          toast.info(siteData.message);
+        }
+      } else {
+        // Master data
+        const masterData = await dataApi.getMasterData({ limit: 100 });
+        const allProperties: Property[] = [];
+
+        if (masterData.sheets && masterData.sheets.length > 0) {
+          masterData.sheets.forEach((sheet: any) => {
+            allProperties.push(...(sheet.data || []));
+          });
+        }
+
+        setProperties(allProperties);
+        setTotalRecords(allProperties.length);
+
+        // Show message if no data available
+        if (masterData.message && allProperties.length === 0) {
+          toast.info(masterData.message);
+        }
+      }
+    } catch (error) {
+      toast.error("Failed to load data");
+      console.error("Error loading data:", error);
+      setProperties([]);
+      setTotalRecords(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [dataSource, currentSite, searchTerm]);
+
+  // Debounced effect to prevent excessive API calls
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      loadData();
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [loadData]);
 
   const filteredProperties = properties.filter((property) => {
     const matchesSearch =
@@ -42,21 +129,40 @@ export default function DataExplorer() {
       !filters.location ||
       property.location.toLowerCase().includes(filters.location.toLowerCase());
 
+    const price =
+      typeof property.price === "number"
+        ? property.price
+        : typeof property.price === "string"
+        ? parseFloat(property.price.replace(/[^\d.]/g, "")) || 0
+        : 0;
+
     const matchesPrice =
-      property.price >= filters.priceRange[0] &&
-      property.price <= filters.priceRange[1];
+      price >= filters.priceRange[0] && price <= filters.priceRange[1];
+
+    const bedrooms =
+      typeof property.bedrooms === "number"
+        ? property.bedrooms
+        : typeof property.bedrooms === "string"
+        ? parseInt(property.bedrooms) || 0
+        : 0;
 
     const matchesBedrooms =
-      filters.bedrooms.length === 0 ||
-      filters.bedrooms.includes(property.bedrooms);
+      filters.bedrooms.length === 0 || filters.bedrooms.includes(bedrooms);
+
+    const bathrooms =
+      typeof property.bathrooms === "number"
+        ? property.bathrooms
+        : typeof property.bathrooms === "string"
+        ? parseInt(property.bathrooms) || 0
+        : 0;
 
     const matchesBathrooms =
-      filters.bathrooms.length === 0 ||
-      filters.bathrooms.includes(property.bathrooms);
+      filters.bathrooms.length === 0 || filters.bathrooms.includes(bathrooms);
 
     const matchesType =
       !filters.propertyType ||
-      property.type.toLowerCase() === filters.propertyType.toLowerCase();
+      (property.type &&
+        property.type.toLowerCase() === filters.propertyType.toLowerCase());
 
     const matchesPromoTags =
       filters.promoTags.length === 0 ||
@@ -141,6 +247,46 @@ export default function DataExplorer() {
           <p className="text-slate-400">
             Query, filter, and export scraped data.
           </p>
+        </div>
+
+        {/* Data Source Selector */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Button
+            onClick={() => setDataSource("master")}
+            variant={dataSource === "master" ? "default" : "outline"}
+            size="sm"
+            className="text-xs"
+          >
+            Master Data
+          </Button>
+          <Button
+            onClick={() => setDataSource("site")}
+            variant={dataSource === "site" ? "default" : "outline"}
+            size="sm"
+            className="text-xs"
+          >
+            Site Data
+          </Button>
+          <Button
+            onClick={() => setDataSource("search")}
+            variant={dataSource === "search" ? "default" : "outline"}
+            size="sm"
+            className="text-xs"
+          >
+            Search
+          </Button>
+          <Button
+            onClick={loadData}
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            disabled={loading}
+          >
+            <RefreshCw
+              className={`w-3 h-3 mr-1 ${loading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
         </div>
 
         {/* Mobile Export Buttons */}

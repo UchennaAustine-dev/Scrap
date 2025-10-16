@@ -8,7 +8,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { ScraperControl } from "@/components/scraper/scraper-control";
 import { UserManagement } from "@/components/user/user-management";
 import { getPageTitle } from "@/lib/utils";
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 
 import { toast } from "sonner";
 
@@ -16,23 +16,24 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("login");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = useCallback(() => {
     setIsAuthenticated(true);
     setActiveTab("dashboard");
     toast.success("Login successful! Welcome back.");
-  };
+  }, []);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     setIsAuthenticated(false);
     setActiveTab("login");
     toast.info("Logged out successfully");
-  };
+  }, []);
 
-  if (!isAuthenticated) {
-    return <LoginScreen onLogin={handleLogin} />;
-  }
+  const handlePageChange = useCallback((page: string) => {
+    setActiveTab(page);
+  }, []);
 
-  const renderContent = () => {
+  // Move renderContent before conditional return to maintain hook order
+  const renderContent = useCallback(() => {
     switch (activeTab) {
       case "dashboard":
         return <Dashboard />;
@@ -45,11 +46,20 @@ export default function Home() {
       default:
         return <Dashboard />;
     }
-  };
+  }, [activeTab]);
+
+  // Conditional return after all hooks
+  if (!isAuthenticated) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 flex">
-      <Sidebar currentPage={activeTab} onPageChange={setActiveTab} />
+      <Sidebar
+        currentPage={activeTab}
+        onPageChange={handlePageChange}
+        onLogout={handleLogout}
+      />
 
       <div className="flex-1 flex flex-col min-h-screen">
         {/* <Header title={getPageTitle(activeTab)} /> */}
