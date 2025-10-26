@@ -28,14 +28,22 @@ interface SiteStat {
 }
 
 export function SiteStatistics() {
+  console.log("[SiteStatistics] Component mounted/updated");
+
   const { data, refetch } = useApi<SiteStat[] | { sites: SiteStat[] }>(() =>
     statsApi.getSiteStats()
   );
 
   const stats = useMemo(() => {
-    if (Array.isArray(data)) return data;
-    return (data as any)?.sites || [];
+    if (Array.isArray(data)) return data as SiteStat[];
+    return ((data as unknown as { sites?: SiteStat[] })?.sites ||
+      []) as SiteStat[];
   }, [data]);
+
+  console.log("[SiteStatistics] Stats data:", {
+    statsCount: stats.length,
+    data,
+  });
 
   type SortKey =
     | "name"
@@ -60,7 +68,19 @@ export function SiteStatistics() {
       if (key === "name") return (s.name || s.site_key || "").toLowerCase();
       if (key === "last_success")
         return s.last_success ? new Date(s.last_success).getTime() : 0;
-      return Number((s as any)?.[key] ?? 0);
+      const numericKeys: Array<Exclude<SortKey, "name" | "last_success">> = [
+        "success_rate",
+        "total_records",
+        "avg_records_per_scrape",
+        "error_count",
+      ];
+      if (
+        numericKeys.includes(key as Exclude<SortKey, "name" | "last_success">)
+      ) {
+        const val = s[key as keyof SiteStat];
+        return Number(val ?? 0);
+      }
+      return 0;
     };
     arr.sort((a, b) => {
       const va = getVal(a, sortKey);

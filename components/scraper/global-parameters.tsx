@@ -33,15 +33,18 @@ export function GlobalParameters({
     exportFormat: "CSV",
   });
 
-  const updateParameter = (key: keyof GlobalParametersType, value: any) => {
+  const updateParameter = <K extends keyof GlobalParametersType>(
+    key: K,
+    value: GlobalParametersType[K]
+  ) => {
     setParameters((prev) => ({ ...prev, [key]: value }));
 
     // Update parent component
     if (key === "maxPagesPerSite" && onMaxPagesChange) {
-      onMaxPagesChange(value);
+      onMaxPagesChange(value as number);
     }
     if (key === "geocoding" && onGeocodingChange) {
-      onGeocodingChange(value);
+      onGeocodingChange(value as boolean);
     }
   };
 

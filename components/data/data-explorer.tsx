@@ -12,12 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Property,
-  FilterState,
-  DataResponse,
-  SearchResponse,
-} from "@/lib/types";
+import { Property, FilterState, SearchResponse } from "@/lib/types";
 import { toast } from "sonner";
 import { dataApi } from "@/lib/api";
 import { useApi } from "@/lib/hooks/useApi";
@@ -26,9 +21,11 @@ import DataTable from "./data-table";
 import FilterSidebar from "./filter-sidebar";
 
 export default function DataExplorer() {
+  console.log("[DataExplorer] Component mounted/updated");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [currentSite, setCurrentSite] = useState<string>("");
+  const [currentSite] = useState<string>("");
   const [dataSource, setDataSource] = useState<"master" | "site" | "search">(
     "master"
   );
@@ -49,41 +46,82 @@ export default function DataExplorer() {
     sourceSite: "",
   });
 
-  // Get available data files
-  const { data: dataFiles, refetch: refetchDataFiles } = useApi(() =>
-    dataApi.listFiles()
-  );
+  // Get available data files - keeping for future use
+  // Use stable function reference to avoid re-mounting issues
+  const getDataFiles = useCallback(() => dataApi.listFiles(), []);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { data: _dataFiles, refetch: _refetchDataFiles } = useApi(getDataFiles);
+
+  console.log("[DataExplorer] State:", {
+    dataSource,
+    currentSite,
+    searchTerm,
+    propertiesCount: properties.length,
+    totalRecords,
+    loading,
+  });
 
   // Load data based on current source with debouncing
   const loadData = useCallback(async () => {
+    console.log(
+      "[DataExplorer] loadData called, dataSource:",
+      dataSource,
+      "currentSite:",
+      currentSite,
+      "searchTerm:",
+      searchTerm
+    );
     setLoading(true);
     try {
       if (dataSource === "search" && searchTerm) {
+        console.log("[DataExplorer] Searching for:", searchTerm);
         const searchResults = await dataApi.search(searchTerm, {
           fields: ["title", "location"],
           limit: 100,
         });
-        setProperties(searchResults.results?.map((r: any) => r.data) || []);
-        setTotalRecords(searchResults.total_results || 0);
+        console.log("[DataExplorer] Search results:", searchResults);
+        const typedSearchResults = searchResults as SearchResponse;
+        setProperties(
+          typedSearchResults.results?.map(
+            (r: SearchResponse["results"][number]) => r.data
+          ) || []
+        );
+        setTotalRecords(typedSearchResults.total_results || 0);
       } else if (dataSource === "site" && currentSite) {
+        console.log("[DataExplorer] Loading site data for:", currentSite);
         const siteData = await dataApi.getSiteData(currentSite, {
           limit: 100,
           source: "cleaned",
         });
-        setProperties(siteData.data || []);
-        setTotalRecords(siteData.total_records || 0);
+        console.log("[DataExplorer] Site data:", siteData);
+        const typedSiteData = siteData as {
+          data?: Property[];
+          total_records?: number;
+          message?: string;
+        };
+        setProperties(typedSiteData.data || []);
+        setTotalRecords(typedSiteData.total_records || 0);
 
         // Show message if no data available
-        if (siteData.message && siteData.data?.length === 0) {
-          toast.info(siteData.message);
+        if (typedSiteData.message && typedSiteData.data?.length === 0) {
+          toast.info(typedSiteData.message);
         }
       } else {
         // Master data
+        console.log("[DataExplorer] Loading master data");
         const masterData = await dataApi.getMasterData({ limit: 100 });
+        console.log(
+          "[DataExplorer] Master workbook response:",
+          JSON.stringify(masterData, null, 2)
+        );
+        const typedMasterData = masterData as {
+          sheets?: { data?: Property[] }[];
+          message?: string;
+        };
         const allProperties: Property[] = [];
 
-        if (masterData.sheets && masterData.sheets.length > 0) {
-          masterData.sheets.forEach((sheet: any) => {
+        if (typedMasterData.sheets && typedMasterData.sheets.length > 0) {
+          typedMasterData.sheets.forEach((sheet) => {
             allProperties.push(...(sheet.data || []));
           });
         }
@@ -92,13 +130,13 @@ export default function DataExplorer() {
         setTotalRecords(allProperties.length);
 
         // Show message if no data available
-        if (masterData.message && allProperties.length === 0) {
-          toast.info(masterData.message);
+        if (typedMasterData.message && allProperties.length === 0) {
+          toast.info(typedMasterData.message);
         }
       }
     } catch (error) {
+      console.error("[DataExplorer] Error loading data:", error);
       toast.error("Failed to load data");
-      console.error("Error loading data:", error);
       setProperties([]);
       setTotalRecords(0);
     } finally {
@@ -205,7 +243,7 @@ export default function DataExplorer() {
           break;
       }
       toast.success(`Data exported to ${format.toUpperCase()} successfully`);
-    } catch (error) {
+    } catch {
       toast.error(`Failed to export to ${format.toUpperCase()}`);
     }
   };

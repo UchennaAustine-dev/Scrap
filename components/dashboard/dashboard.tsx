@@ -108,7 +108,7 @@ export function Dashboard() {
         </Suspense>
       </ErrorBoundary>
     );
-  }, [currentPage, currentPageConfig, isTransitioning]);
+  }, [currentPageConfig, isTransitioning]);
 
   return (
     <div className="flex h-screen bg-slate-900 overflow-hidden">

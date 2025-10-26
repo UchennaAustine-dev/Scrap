@@ -14,13 +14,18 @@ import { StatsResponse, ScrapeStatus, SiteListResponse } from "@/lib/types";
 import { toast } from "sonner";
 
 export function DashboardOverview() {
+  console.log("[DashboardOverview] Component mounted/updated");
+
   // Get stats data
-  const { data: stats, refetch: refetchStats } = useApi<StatsResponse>(() =>
-    statsApi.getOverview()
+  const { data: stats, refetch: refetchStats } = useApi<StatsResponse>(
+    async () => statsApi.getOverview() as Promise<StatsResponse>
   );
 
   // Poll for scraper status with stable function reference
-  const getScrapeStatus = useCallback(() => scrapeApi.status(), []);
+  const getScrapeStatus = useCallback(
+    async () => scrapeApi.status() as Promise<ScrapeStatus>,
+    []
+  );
   const { data: scrapeStatus } = usePolling<ScrapeStatus>(
     getScrapeStatus,
     10000, // Poll every 10 seconds to reduce load
@@ -29,10 +34,17 @@ export function DashboardOverview() {
 
   // Get sites data
   const { data: sitesData, refetch: refetchSites } = useApi<SiteListResponse>(
-    () => sitesApi.list()
+    async () => sitesApi.list() as Promise<SiteListResponse>
   );
 
+  console.log("[DashboardOverview] Data loaded:", {
+    stats,
+    scrapeStatus,
+    sitesData,
+  });
+
   const handleRefresh = () => {
+    console.log("[DashboardOverview] Refresh triggered");
     refetchStats();
     refetchSites();
     toast.success("Dashboard refreshed");

@@ -33,7 +33,7 @@ export function SiteDetailsModal({
 
   const site: Site | undefined = useMemo(() => {
     if (!data) return undefined;
-    return (data as any)?.site || (data as Site);
+    return (data as { site?: Site })?.site || (data as Site);
   }, [data]);
 
   const [form, setForm] = useState<Partial<Site>>({});
@@ -58,7 +58,7 @@ export function SiteDetailsModal({
 
   if (!isOpen) return null;
 
-  const handleChange = (field: keyof Site, value: any) => {
+  const handleChange = <K extends keyof Site>(field: K, value: Site[K]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -69,7 +69,7 @@ export function SiteDetailsModal({
       toast.success("Site updated successfully");
       onSaved?.();
       onClose();
-    } catch (e) {
+    } catch {
       toast.error("Failed to update site");
     }
   };
@@ -168,8 +168,8 @@ export function SiteDetailsModal({
                 <textarea
                   className="w-full rounded-md border border-slate-600 bg-slate-900 text-slate-200 p-3 text-sm"
                   rows={4}
-                  value={(form as any).notes || ""}
-                  onChange={(e) => handleChange("notes" as any, e.target.value)}
+                  value={form.notes || ""}
+                  onChange={(e) => handleChange("notes", e.target.value)}
                   placeholder="Internal notes..."
                 />
               </div>

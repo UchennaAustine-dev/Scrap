@@ -44,7 +44,10 @@ export default function FilterSidebar({
     }));
   };
 
-  const updateFilter = (key: keyof FilterState, value: any) => {
+  const updateFilter = <K extends keyof FilterState>(
+    key: K,
+    value: FilterState[K]
+  ) => {
     onFiltersChange({ ...filters, [key]: value });
   };
 
@@ -159,8 +162,10 @@ export default function FilterSidebar({
         <FilterSection title="Price Range" section="price">
           <div className="space-y-4">
             <Slider
-              value={filters.priceRange}
-              onValueChange={(value) => updateFilter("priceRange", value)}
+              value={filters.priceRange as [number, number]}
+              onValueChange={(value: [number, number]) =>
+                updateFilter("priceRange", value)
+              }
               max={1000000}
               min={0}
               step={10000}

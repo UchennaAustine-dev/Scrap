@@ -18,23 +18,35 @@ export function SiteLogsModal({
   isOpen,
   onClose,
 }: SiteLogsModalProps) {
-  const getSiteLogs = useCallback(() => {
-    if (!siteKey) return Promise.resolve([] as any);
-    return logsApi.getSiteLogs(siteKey, 200);
+  const getSiteLogs = useCallback((): Promise<Log[] | { logs?: Log[] }> => {
+    if (!siteKey) return Promise.resolve([] as Log[]);
+    return logsApi.getSiteLogs(siteKey, 200) as Promise<
+      Log[] | { logs?: Log[] }
+    >;
   }, [siteKey]);
 
-  const { data: logs } = usePolling<any[]>(
+  type Log = { timestamp?: string; site_key?: string; message?: string };
+  const { data: logs } = usePolling<Log[] | { logs?: Log[] }>(
     getSiteLogs,
     5000,
     Boolean(isOpen && siteKey)
   );
-  const { refetch } = useApi(() => logsApi.getSiteLogs(siteKey || "", 200), {
+
+  // Use stable function reference for manual refetch with proper dependencies
+  const getRefetchLogs = useCallback(() => {
+    if (!siteKey) return Promise.resolve([]);
+    return logsApi.getSiteLogs(siteKey, 200);
+  }, [siteKey]);
+
+  const { refetch } = useApi(getRefetchLogs, {
     immediate: false,
   });
 
   if (!isOpen) return null;
 
-  const logsArray = Array.isArray(logs) ? logs : (logs as any)?.logs || [];
+  const logsArray: Log[] = Array.isArray(logs)
+    ? (logs as Log[])
+    : (logs as unknown as { logs?: Log[] })?.logs || [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -73,7 +85,7 @@ export function SiteLogsModal({
         <div className="p-4 sm:p-6">
           <div className="bg-slate-900 rounded-lg p-3 sm:p-4 h-[60vh] overflow-y-auto font-mono text-xs sm:text-sm">
             {logsArray.length > 0 ? (
-              logsArray.map((log: any, idx: number) => {
+              logsArray.map((log: Log, idx: number) => {
                 const ts = log.timestamp
                   ? new Date(log.timestamp).toLocaleTimeString()
                   : "";

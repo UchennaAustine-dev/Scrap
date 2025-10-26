@@ -7,7 +7,7 @@ import DataExplorer from "@/components/data/data-explorer";
 import { Sidebar } from "@/components/layout/sidebar";
 import { ScraperControl } from "@/components/scraper/scraper-control";
 import { UserManagement } from "@/components/user/user-management";
-import { getPageTitle } from "@/lib/utils";
+import StatusPage from "./status/page";
 import React, { useState, useCallback } from "react";
 
 import { toast } from "sonner";
@@ -29,21 +29,32 @@ export default function Home() {
   }, []);
 
   const handlePageChange = useCallback((page: string) => {
+    console.log("[Home] Page change requested:", page);
     setActiveTab(page);
+    console.log("[Home] Active tab set to:", page);
   }, []);
 
   // Move renderContent before conditional return to maintain hook order
   const renderContent = useCallback(() => {
+    console.log("[Home] Rendering content for activeTab:", activeTab);
     switch (activeTab) {
       case "dashboard":
+        console.log("[Home] Rendering Dashboard");
         return <Dashboard />;
-      case "data-search":
+      case "data":
+        console.log("[Home] Rendering DataExplorer");
         return <DataExplorer />;
-      case "scraper-control":
+      case "scraper":
+        console.log("[Home] Rendering ScraperControl");
         return <ScraperControl />;
-      case "user-management":
+      case "status":
+        console.log("[Home] Rendering StatusPage");
+        return <StatusPage />;
+      case "users":
+        console.log("[Home] Rendering UserManagement");
         return <UserManagement />;
       default:
+        console.log("[Home] Rendering Dashboard (default)");
         return <Dashboard />;
     }
   }, [activeTab]);

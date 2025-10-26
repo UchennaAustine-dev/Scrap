@@ -1,13 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ApiError } from "../api";
 
-// Type definitions for NodeJS
-declare global {
-  namespace NodeJS {
-    interface Timeout {}
-  }
-}
-
 interface UseApiState<T> {
   data: T | null;
   loading: boolean;
@@ -29,16 +22,14 @@ export function useApi<T>(
     error: null,
   });
 
-  // Use ref to store the latest apiCall without causing re-renders
-  const apiCallRef = useRef(apiCall);
   const isMountedRef = useRef(true);
-  const optionsRef = useRef(options);
 
-  // Always update the ref with the latest function
-  apiCallRef.current = apiCall;
+  // Store options in ref to avoid recreating execute on every options change
+  const optionsRef = useRef(options);
   optionsRef.current = options;
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
@@ -47,6 +38,8 @@ export function useApi<T>(
   const execute = useCallback(async () => {
     if (!isMountedRef.current) return;
 
+    console.log("[useApi] Starting request...");
+
     setState((prev: UseApiState<T>) => ({
       ...prev,
       loading: true,
@@ -54,9 +47,11 @@ export function useApi<T>(
     }));
 
     try {
-      const data = await apiCallRef.current();
+      // Call apiCall directly
+      const data = await apiCall();
 
       if (isMountedRef.current) {
+        console.log("[useApi] Request succeeded:", data);
         setState({ data, loading: false, error: null });
       }
     } catch (error) {
@@ -64,6 +59,7 @@ export function useApi<T>(
 
       const errorMessage =
         error instanceof ApiError ? error.message : "An error occurred";
+      console.error("[useApi] Request failed:", errorMessage, error);
       setState((prev: UseApiState<T>) => ({
         ...prev,
         loading: false,
@@ -74,13 +70,14 @@ export function useApi<T>(
         optionsRef.current.onError(error);
       }
     }
-  }, []); // Remove options.onError from dependencies
+  }, [apiCall]); // Only depend on apiCall
 
   useEffect(() => {
+    // Execute on mount if immediate is not false
     if (optionsRef.current.immediate !== false) {
       execute();
     }
-  }, [execute]); // Only depend on execute which is now stable
+  }, [execute]); // Will re-execute when apiCall changes
 
   return {
     ...state,
@@ -88,7 +85,7 @@ export function useApi<T>(
   };
 }
 
-export function useApiMutation<T, P = any>(
+export function useApiMutation<T, P = unknown>(
   apiCall: (params: P) => Promise<T>
 ): {
   mutate: (params: P) => Promise<T>;
@@ -100,16 +97,19 @@ export function useApiMutation<T, P = any>(
 
   const mutate = useCallback(
     async (params: P): Promise<T> => {
+      console.log("[useApiMutation] Starting mutation with params:", params);
       setLoading(true);
       setError(null);
 
       try {
         const result = await apiCall(params);
+        console.log("[useApiMutation] Mutation succeeded:", result);
         setLoading(false);
         return result;
       } catch (err) {
         const errorMessage =
           err instanceof ApiError ? err.message : "An error occurred";
+        console.error("[useApiMutation] Mutation failed:", errorMessage, err);
         setError(errorMessage);
         setLoading(false);
         throw err;
@@ -133,18 +133,17 @@ export function usePolling<T>(
     error: null,
   });
 
-  // Use ref to store the latest apiCall and mount status
-  const apiCallRef = useRef(apiCall);
   const isMountedRef = useRef(true);
   const intervalRef = useRef(interval);
   const enabledRef = useRef(enabled);
+  const pollCountRef = useRef(0);
 
-  // Always update refs with latest values
-  apiCallRef.current = apiCall;
+  // Update refs with latest values
   intervalRef.current = interval;
   enabledRef.current = enabled;
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
@@ -153,10 +152,17 @@ export function usePolling<T>(
   useEffect(() => {
     if (!enabled) return;
 
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    pollCountRef.current = 0;
 
     const poll = async () => {
       if (!isMountedRef.current || !enabledRef.current) return;
+
+      pollCountRef.current++;
+      const currentPoll = pollCountRef.current;
+      console.log(
+        `[usePolling] Poll #${currentPoll} starting (interval: ${intervalRef.current}ms)`
+      );
 
       try {
         setState((prev: UseApiState<T>) => ({
@@ -165,9 +171,11 @@ export function usePolling<T>(
           error: null,
         }));
 
-        const data = await apiCallRef.current();
+        // Call apiCall directly, not through a ref
+        const data = await apiCall();
 
         if (isMountedRef.current) {
+          console.log(`[usePolling] Poll #${currentPoll} succeeded:`, data);
           setState({ data, loading: false, error: null });
         }
       } catch (error) {
@@ -175,6 +183,11 @@ export function usePolling<T>(
 
         const errorMessage =
           error instanceof ApiError ? error.message : "An error occurred";
+        console.error(
+          `[usePolling] Poll #${currentPoll} failed:`,
+          errorMessage,
+          error
+        );
         setState((prev: UseApiState<T>) => ({
           ...prev,
           loading: false,
@@ -189,14 +202,20 @@ export function usePolling<T>(
     };
 
     // Start polling immediately
+    console.log(
+      `[usePolling] Starting polling (interval: ${intervalRef.current}ms, enabled: ${enabled})`
+    );
     poll();
 
     return () => {
+      console.log(
+        `[usePolling] Stopping polling (total polls: ${pollCountRef.current})`
+      );
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
     };
-  }, [enabled]); // Only depend on enabled to restart polling when toggled
+  }, [apiCall, enabled]); // Depend on apiCall and enabled
 
   return state;
 }

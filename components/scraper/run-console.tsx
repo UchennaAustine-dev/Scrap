@@ -1,62 +1,107 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logsApi, scrapeApi } from "@/lib/api";
 import { useApi, usePolling } from "@/lib/hooks/useApi";
-import { ScrapeStatus, LogEntry } from "@/lib/types";
+import { LogEntry, HistoryResponse, HistoryRun } from "@/lib/types";
 import { toast } from "sonner";
 
 interface RunConsoleProps {
   isRunning: boolean;
-  scrapeStatus?: ScrapeStatus;
 }
 
-export function RunConsole({ isRunning, scrapeStatus }: RunConsoleProps) {
+export function RunConsole({ isRunning }: RunConsoleProps) {
   const [activeTab, setActiveTab] = useState("current");
-  const [forceRefresh, setForceRefresh] = useState(0);
+
+  console.log(
+    "[RunConsole] Component mounted/updated, isRunning:",
+    isRunning,
+    "activeTab:",
+    activeTab
+  );
 
   // Poll for logs when running with stable function references
   const getCurrentLogs = useCallback(
-    () => logsApi.getLogs({ limit: 50 }),
-    [forceRefresh]
+    (): Promise<LogEntry[]> =>
+      logsApi.getLogs({ limit: 50 }) as Promise<LogEntry[]>,
+    []
   );
-  const getErrorLogs = useCallback(() => logsApi.getErrors(20), [forceRefresh]);
+  const getErrorLogs = useCallback(
+    (): Promise<LogEntry[]> => logsApi.getErrors(20) as Promise<LogEntry[]>,
+    []
+  );
 
   const { data: currentLogs } = usePolling<LogEntry[]>(
     getCurrentLogs,
-    5000, // Poll every 5 seconds to reduce load
-    isRunning
+    isRunning ? 5000 : 15000, // Poll slower when idle to still surface logs
+    true
   );
 
   const { data: errorLogs } = usePolling<LogEntry[]>(
     getErrorLogs,
-    10000, // Poll every 10 seconds to reduce load
-    isRunning
+    isRunning ? 10000 : 30000, // Poll slower when idle
+    true
   );
 
-  const { data: historyData, refetch: refetchHistory } = useApi(() =>
-    scrapeApi.history(10)
+  // Use stable function reference for history to avoid re-mounting issues
+  const getHistory = useCallback(
+    (): Promise<HistoryResponse> =>
+      scrapeApi.history(10) as Promise<HistoryResponse>,
+    []
   );
+
+  const { data: historyData, refetch: refetchHistory } =
+    useApi<HistoryResponse>(getHistory);
+
+  console.log("[RunConsole] Logs data:");
+  console.log(
+    "  currentLogsCount:",
+    Array.isArray(currentLogs) ? currentLogs.length : 0
+  );
+  console.log(
+    "  errorLogsCount:",
+    Array.isArray(errorLogs) ? errorLogs.length : 0
+  );
+  console.log("  historyCount:", historyData?.history?.length || 0);
+
+  if (Array.isArray(currentLogs) && currentLogs.length > 0) {
+    console.log(
+      "  currentLogs (first 3):",
+      JSON.stringify(currentLogs.slice(0, 3), null, 2)
+    );
+  }
+  if (Array.isArray(errorLogs) && errorLogs.length > 0) {
+    console.log(
+      "  errorLogs (first 3):",
+      JSON.stringify(errorLogs.slice(0, 3), null, 2)
+    );
+  }
+  if (historyData?.history && historyData.history.length > 0) {
+    console.log(
+      "  history (first 3):",
+      JSON.stringify(historyData.history.slice(0, 3), null, 2)
+    );
+  }
 
   const handleRefresh = () => {
+    console.log("[RunConsole] Refresh triggered for tab:", activeTab);
     if (activeTab === "history") {
       refetchHistory();
     } else {
-      setForceRefresh((prev) => prev + 1);
     }
     toast.success("Logs refreshed");
   };
 
   // Ensure logs are always arrays
-  const currentLogsArray = Array.isArray(currentLogs)
-    ? currentLogs
-    : (currentLogs as any)?.logs || [];
+  const currentLogsArray: LogEntry[] = Array.isArray(currentLogs)
+    ? (currentLogs as LogEntry[])
+    : (currentLogs as unknown as { logs?: LogEntry[] })?.logs || [];
 
-  const errorLogsArray = Array.isArray(errorLogs)
-    ? errorLogs
-    : (errorLogs as any)?.logs || [];
+  const errorLogsArray: LogEntry[] = Array.isArray(errorLogs)
+    ? (errorLogs as LogEntry[])
+    : (errorLogs as unknown as { logs?: LogEntry[] })?.logs || [];
 
   const formatLogEntry = (log: LogEntry) => {
     const timestamp = new Date(log.timestamp).toLocaleTimeString();
@@ -123,9 +168,7 @@ export function RunConsole({ isRunning, scrapeStatus }: RunConsoleProps) {
                   </div>
                 ))
               ) : (
-                <div className="text-slate-400">
-                  {isRunning ? "Loading logs..." : "No recent logs"}
-                </div>
+                <div className="text-slate-400">No recent logs</div>
               )}
               {isRunning && (
                 <div className="text-blue-400 animate-pulse">
@@ -153,21 +196,74 @@ export function RunConsole({ isRunning, scrapeStatus }: RunConsoleProps) {
           )}
 
           {activeTab === "history" && (
-            <div className="space-y-1">
-              {historyData?.history?.map((run: any, index: number) => (
-                <div
-                  key={`history-${index}`}
-                  className="text-slate-300 break-all"
-                >
-                  • [
-                  {new Date(run.timestamp || run.started_at).toLocaleString()}]
-                  {run.success
-                    ? "Run completed successfully"
-                    : "Run completed with errors"}
-                  {run.count && ` - ${run.count} records`}
-                  {run.site_key && ` (${run.site_key})`}
-                </div>
-              )) || (
+            <div className="space-y-2">
+              {historyData?.history && historyData.history.length > 0 ? (
+                historyData.history.map((run: HistoryRun, index: number) => {
+                  const startTime = run.started_at
+                    ? new Date(run.started_at).toLocaleString()
+                    : "Unknown";
+                  const endTime = run.completed_at
+                    ? new Date(run.completed_at).toLocaleString()
+                    : "N/A";
+                  const duration =
+                    run.started_at && run.completed_at
+                      ? Math.round(
+                          (new Date(run.completed_at).getTime() -
+                            new Date(run.started_at).getTime()) /
+                            1000 /
+                            60
+                        )
+                      : null;
+                  const sites = Array.isArray(run.sites)
+                    ? run.sites.join(", ")
+                    : run.sites || "N/A";
+                  const statusText = run.success
+                    ? "✓ Success"
+                    : run.return_code === 0
+                    ? "✓ Success"
+                    : "✗ Failed";
+                  const statusColor =
+                    run.success || run.return_code === 0
+                      ? "text-green-400"
+                      : "text-red-400";
+
+                  return (
+                    <div
+                      key={`history-${run.run_id || index}`}
+                      className="pb-2 border-b border-slate-800 last:border-0"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                        <span className={`font-semibold ${statusColor}`}>
+                          {statusText}
+                        </span>
+                        <span className="text-slate-600">•</span>
+                        <span className="text-slate-400 text-xs">
+                          Run ID: {run.run_id || "N/A"}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1 space-y-0.5">
+                        <div>Started: {startTime}</div>
+                        {run.completed_at && <div>Completed: {endTime}</div>}
+                        <div>Sites: {sites}</div>
+                        <div className="flex gap-3 flex-wrap">
+                          {duration !== null && (
+                            <span>Duration: {duration}min</span>
+                          )}
+                          {run.max_pages && (
+                            <span>Max Pages: {run.max_pages}</span>
+                          )}
+                          {run.geocoding !== null &&
+                            run.geocoding !== undefined && (
+                              <span>
+                                Geocoding: {run.geocoding ? "Yes" : "No"}
+                              </span>
+                            )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
                 <div className="text-slate-400">No run history available</div>
               )}
             </div>

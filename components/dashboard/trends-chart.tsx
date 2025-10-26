@@ -15,17 +15,36 @@ interface TrendsPoint {
 }
 
 export function TrendsChart() {
+  console.log("[TrendsChart] Component mounted/updated");
+
   const { data, refetch } = useApi<TrendsPoint[]>(() => statsApi.getTrends(7));
 
   const chartData = useMemo(() => {
-    const arr = Array.isArray(data) ? data : (data as any)?.points || [];
-    return arr.map((d: any) => ({
+    type RawPoint = Partial<{
+      date: string;
+      day: string;
+      total_records: number;
+      records: number;
+      successful_runs: number;
+      success: number;
+      failed_runs: number;
+      failed: number;
+    }>;
+    const arr: RawPoint[] = Array.isArray(data)
+      ? (data as RawPoint[])
+      : (data as unknown as { points?: RawPoint[] })?.points || [];
+    return arr.map((d) => ({
       date: d.date || d.day || "",
       records: d.total_records ?? d.records ?? 0,
       success: d.successful_runs ?? d.success ?? 0,
       failed: d.failed_runs ?? d.failed ?? 0,
     }));
   }, [data]);
+
+  console.log("[TrendsChart] Chart data:", {
+    dataPointsCount: chartData.length,
+    data,
+  });
 
   return (
     <div className="bg-slate-800 rounded-lg border border-slate-700">

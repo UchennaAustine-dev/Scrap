@@ -26,7 +26,7 @@ export function RecentActivity({ scrapeStatus }: RecentActivityProps) {
     const run = scrapeStatus.last_run;
     activities.push({
       id: "last",
-      date: new Date(run.completed_at || run.started_at).toLocaleString(),
+      date: new Date(run.completed_at).toLocaleString(),
       scraper: Array.isArray(run.sites) ? run.sites.join(", ") : run.sites,
       status: run.success ? "Success" : "Failed",
     });
@@ -36,10 +36,10 @@ export function RecentActivity({ scrapeStatus }: RecentActivityProps) {
   if (scrapeStatus?.site_metadata) {
     Object.entries(scrapeStatus.site_metadata).forEach(
       ([siteKey, metadata]) => {
-        if (metadata.last_successful_scrape) {
+        if (metadata.last_scrape) {
           activities.push({
-            id: siteKey,
-            date: new Date(metadata.last_successful_scrape).toLocaleString(),
+            id: `${siteKey}-${metadata.last_scrape}`,
+            date: new Date(metadata.last_scrape).toLocaleString(),
             scraper: siteKey,
             status: "Success",
           });

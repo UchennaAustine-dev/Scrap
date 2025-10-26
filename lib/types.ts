@@ -18,13 +18,13 @@ export interface Site {
   category?: string;
   priority?: number;
   notes?: string;
-  selectors?: any;
-  pagination?: any;
+  selectors?: Record<string, unknown>;
+  pagination?: Record<string, unknown>;
   lagos_paths?: string[];
   list_paths?: string[];
   search_param?: string;
-  overrides?: any;
-  metadata?: any;
+  overrides?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ScraperSite extends Site {
@@ -38,7 +38,7 @@ export interface Activity {
   status: "Success" | "Failed" | "Running";
 }
 
-export interface ActivityLog extends Activity {}
+export type ActivityLog = Activity;
 
 export interface TopSite {
   id: string;
@@ -94,7 +94,8 @@ export interface FilterState {
 }
 
 // API Response Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
+  // TODO: align all API call sites to concrete types and remove default generic
   success?: boolean;
   error?: string;
   data?: T;
@@ -106,17 +107,37 @@ export interface ScrapeStatus {
     run_id: string;
     started_at: string;
     sites: string | string[];
-    max_pages?: number;
-    geocoding?: boolean;
+    max_pages?: number | null;
+    geocoding?: boolean | null;
     pid: number;
     completed_at?: string;
     return_code?: number;
     success?: boolean;
     stopped_at?: string;
     stopped_manually?: boolean;
+    master_workbook_generated?: boolean;
+    master_workbook_error?: string | null;
   };
-  last_run?: any;
-  site_metadata?: Record<string, any>;
+  last_run?: {
+    run_id: string;
+    started_at: string;
+    completed_at: string;
+    sites: string | string[];
+    max_pages?: number | null;
+    geocoding?: boolean | null;
+    pid: number;
+    return_code: number;
+    success: boolean;
+    master_workbook_generated?: boolean;
+    master_workbook_error?: string | null;
+  } | null;
+  site_metadata?: Record<
+    string,
+    {
+      last_scrape: string;
+      total_scrapes: number;
+    }
+  >;
 }
 
 export interface SiteListResponse {
@@ -160,4 +181,45 @@ export interface LogEntry {
   level: string;
   message: string;
   site_key?: string;
+}
+
+export interface HistoryRun {
+  run_id: string;
+  started_at: string;
+  completed_at?: string;
+  sites: string | string[];
+  max_pages?: number;
+  geocoding?: boolean;
+  pid: number;
+  return_code?: number;
+  success?: boolean;
+}
+
+export interface HistoryResponse {
+  history: HistoryRun[];
+  total: number;
+  limit: number;
+}
+
+export interface SiteStat {
+  site_key: string;
+  name?: string;
+  total_scrapes?: number;
+  successful_scrapes?: number;
+  failed_scrapes?: number;
+  success_rate?: number;
+  avg_records_per_scrape?: number;
+  total_records?: number;
+  avg_scrape_duration?: number;
+  last_scrape?: string;
+  last_success?: string;
+  error_count?: number;
+  health_score?: number;
+}
+
+export interface TrendsPoint {
+  date: string;
+  total_records: number;
+  successful_runs: number;
+  failed_runs: number;
 }

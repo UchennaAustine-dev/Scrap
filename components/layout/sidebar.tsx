@@ -12,6 +12,7 @@ import {
   X,
   ChevronRight,
   LogOut,
+  Activity,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,13 @@ const navigation = [
     badge: "2 active",
   },
   {
+    name: "Scraper Status",
+    icon: Activity,
+    id: "status",
+    description: "Real-time status",
+    badge: null,
+  },
+  {
     name: "Data Explorer",
     icon: Search,
     id: "data",
@@ -63,7 +71,9 @@ const footerNavigation = [
 
 export function Sidebar({ currentPage, onPageChange, onLogout }: SidebarProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Keeping for future desktop collapse feature
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_isCollapsed, _setIsCollapsed] = useState(false);
 
   // Handle mobile menu toggle
   const toggleMobile = useCallback(() => {
@@ -99,6 +109,7 @@ export function Sidebar({ currentPage, onPageChange, onLogout }: SidebarProps) {
   );
 
   // Sidebar content component
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className="flex flex-col h-full">
       {/* Logo and brand */}

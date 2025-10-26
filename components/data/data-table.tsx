@@ -54,7 +54,7 @@ export default function DataTable({ properties }: DataTableProps) {
             property listings from configured sites.
           </p>
           <p className="text-xs text-slate-500 mt-4">
-            Go to "Scraper Control" to start collecting data
+            Go to &quot;Scraper Control&quot; to start collecting data
           </p>
         </div>
       </div>
