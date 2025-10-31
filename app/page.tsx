@@ -53,69 +53,24 @@ export default function Home() {
       case "users":
         return <UserManagement />;
       case "rate-limit":
-        return (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <DynamicPage page="rate-limit" />
-          </React.Suspense>
-        );
       case "price-intelligence":
-        return (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <DynamicPage page="price-intelligence" />
-          </React.Suspense>
-        );
       case "market-trends":
-        return (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <DynamicPage page="market-trends" />
-          </React.Suspense>
-        );
       case "search":
-        return (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <DynamicPage page="search" />
-          </React.Suspense>
-        );
       case "saved-searches":
-        return (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <DynamicPage page="saved-searches" />
-          </React.Suspense>
-        );
       case "export":
-        return (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <DynamicPage page="export" />
-          </React.Suspense>
-        );
       case "firestore":
-        return (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <DynamicPage page="firestore" />
-          </React.Suspense>
-        );
       case "github":
-        return (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <DynamicPage page="github" />
-          </React.Suspense>
-        );
       case "duplicates":
-        return (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <DynamicPage page="duplicates" />
-          </React.Suspense>
-        );
       case "quality":
-        return (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <DynamicPage page="quality" />
-          </React.Suspense>
-        );
       case "schedule":
+      case "health":
+      case "email":
+      case "alerts":
+      case "top-performers":
+      case "site-health":
         return (
           <React.Suspense fallback={<div>Loading...</div>}>
-            <DynamicPage page="scheduler" />
+            <DynamicPage page={activeTab} />
           </React.Suspense>
         );
       default:
