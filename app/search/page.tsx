@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from "react";
 import { apiClient } from "@/lib/api";
 import { useApi } from "@/lib/hooks/useApi";
