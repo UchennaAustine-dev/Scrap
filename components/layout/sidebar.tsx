@@ -103,6 +103,77 @@ const navigation = [
     description: "Manage users",
     badge: "3 online",
   },
+  // New endpoints
+  {
+    name: "Rate Limit",
+    icon: Activity,
+    id: "rate-limit",
+    description: "API rate limit status",
+    badge: null,
+  },
+  {
+    name: "Price Intelligence",
+    icon: Database,
+    id: "price-intelligence",
+    description: "Price drops & stale listings",
+    badge: null,
+  },
+  {
+    name: "Market Trends",
+    icon: Database,
+    id: "market-trends",
+    description: "Market trends overview",
+    badge: null,
+  },
+  {
+    name: "Search",
+    icon: Search,
+    id: "search",
+    description: "Property search",
+    badge: null,
+  },
+  {
+    name: "Saved Searches",
+    icon: Search,
+    id: "saved-searches",
+    description: "Saved search queries",
+    badge: null,
+  },
+  {
+    name: "Export",
+    icon: Database,
+    id: "export",
+    description: "Export data",
+    badge: null,
+  },
+  {
+    name: "Firestore",
+    icon: Database,
+    id: "firestore",
+    description: "Firestore integration",
+    badge: null,
+  },
+  {
+    name: "GitHub",
+    icon: Database,
+    id: "github",
+    description: "GitHub workflow runs",
+    badge: null,
+  },
+  {
+    name: "Duplicates",
+    icon: Database,
+    id: "duplicates",
+    description: "Duplicate detection",
+    badge: null,
+  },
+  {
+    name: "Quality",
+    icon: Database,
+    id: "quality",
+    description: "Quality scoring",
+    badge: null,
+  },
 ];
 
 // Footer navigation
@@ -153,7 +224,7 @@ export function Sidebar({ currentPage, onPageChange, onLogout }: SidebarProps) {
   // Sidebar content component
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-y-auto scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-slate-900">
       {/* Logo and brand */}
       <div className="flex items-center space-x-3 p-6 border-b border-slate-700">
         <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">

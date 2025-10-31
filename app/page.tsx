@@ -1,5 +1,5 @@
 "use client";
-
+import React, { useState, useCallback } from "react";
 import { LoginScreen } from "@/components/auth/login-screen";
 import { Dashboard } from "@/components/dashboard/dashboard";
 import DataExplorer from "@/components/data/data-explorer";
@@ -8,9 +8,13 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { ScraperControl } from "@/components/scraper/scraper-control";
 import { UserManagement } from "@/components/user/user-management";
 import StatusPage from "./status/page";
-import React, { useState, useCallback } from "react";
-
 import { toast } from "sonner";
+
+// Dynamic import helper for new pages
+const DynamicPage = ({ page }: { page: string }) => {
+  const PageComponent = React.lazy(() => import(`./${page}/page`));
+  return <PageComponent />;
+};
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("login");
@@ -39,22 +43,82 @@ export default function Home() {
     console.log("[Home] Rendering content for activeTab:", activeTab);
     switch (activeTab) {
       case "dashboard":
-        console.log("[Home] Rendering Dashboard");
         return <Dashboard />;
       case "data":
-        console.log("[Home] Rendering DataExplorer");
         return <DataExplorer />;
       case "scraper":
-        console.log("[Home] Rendering ScraperControl");
         return <ScraperControl />;
       case "status":
-        console.log("[Home] Rendering StatusPage");
         return <StatusPage />;
       case "users":
-        console.log("[Home] Rendering UserManagement");
         return <UserManagement />;
+      case "rate-limit":
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <DynamicPage page="rate-limit" />
+          </React.Suspense>
+        );
+      case "price-intelligence":
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <DynamicPage page="price-intelligence" />
+          </React.Suspense>
+        );
+      case "market-trends":
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <DynamicPage page="market-trends" />
+          </React.Suspense>
+        );
+      case "search":
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <DynamicPage page="search" />
+          </React.Suspense>
+        );
+      case "saved-searches":
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <DynamicPage page="saved-searches" />
+          </React.Suspense>
+        );
+      case "export":
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <DynamicPage page="export" />
+          </React.Suspense>
+        );
+      case "firestore":
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <DynamicPage page="firestore" />
+          </React.Suspense>
+        );
+      case "github":
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <DynamicPage page="github" />
+          </React.Suspense>
+        );
+      case "duplicates":
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <DynamicPage page="duplicates" />
+          </React.Suspense>
+        );
+      case "quality":
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <DynamicPage page="quality" />
+          </React.Suspense>
+        );
+      case "schedule":
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <DynamicPage page="scheduler" />
+          </React.Suspense>
+        );
       default:
-        console.log("[Home] Rendering Dashboard (default)");
         return <Dashboard />;
     }
   }, [activeTab]);
