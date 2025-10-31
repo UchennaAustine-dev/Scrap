@@ -365,7 +365,7 @@ export function Sidebar({ currentPage, onPageChange, onLogout }: SidebarProps) {
       )}
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-slate-900 border-r border-slate-700 shadow-xl">
+      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-slate-900 border-r border-slate-700 shadow-xl overflow-y-auto max-h-screen">
         <SidebarContent />
       </div>
     </>
