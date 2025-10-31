@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { ScraperStatusCard } from "@/components/scraper/scraper-status-card";
-import { scrapeApi } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import { usePolling } from "@/lib/hooks/useApi";
 import { ScrapeStatus } from "@/lib/types";
 import { RefreshCw } from "lucide-react";
@@ -13,7 +13,7 @@ export default function StatusPage() {
   const [manualRefreshKey, setManualRefreshKey] = useState(0);
 
   // Poll for scraper status
-  const getScrapeStatus = useCallback(() => scrapeApi.status(), []);
+  const getScrapeStatus = useCallback(() => apiClient.getScrapeStatus(), []);
   const { data: scrapeStatus, loading: isLoading } = usePolling<ScrapeStatus>(
     getScrapeStatus,
     10000, // Poll every 10 seconds
@@ -23,7 +23,7 @@ export default function StatusPage() {
   const handleRefresh = () => {
     setManualRefreshKey((prev) => prev + 1);
     // Trigger immediate re-fetch by calling the API directly
-    scrapeApi.status();
+    apiClient.getScrapeStatus();
   };
 
   return (

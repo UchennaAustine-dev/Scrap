@@ -12,9 +12,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Property, FilterState, SearchResponse } from "@/lib/types";
+import { Property, FilterState, QueryResult } from "@/lib/types";
 import { toast } from "sonner";
-import { dataApi } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import { useApi } from "@/lib/hooks/useApi";
 import { exportToCSV, exportToXLSX, exportToPDF } from "@/lib/export-utils";
 import DataTable from "./data-table";
@@ -48,9 +48,9 @@ export default function DataExplorer() {
 
   // Get available data files - keeping for future use
   // Use stable function reference to avoid re-mounting issues
-  const getDataFiles = useCallback(() => dataApi.listFiles(), []);
+  // Removed getDataFiles, not implemented in API client
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { data: _dataFiles, refetch: _refetchDataFiles } = useApi(getDataFiles);
+  // Removed getDataFiles and related useApi usage
 
   console.log("[DataExplorer] State:", {
     dataSource,
@@ -75,23 +75,18 @@ export default function DataExplorer() {
     try {
       if (dataSource === "search" && searchTerm) {
         console.log("[DataExplorer] Searching for:", searchTerm);
-        const searchResults = await dataApi.search(searchTerm, {
-          fields: ["title", "location"],
+        const searchResults = await apiClient.searchData({
+          query: searchTerm,
           limit: 100,
         });
         console.log("[DataExplorer] Search results:", searchResults);
-        const typedSearchResults = searchResults as SearchResponse;
-        setProperties(
-          typedSearchResults.results?.map(
-            (r: SearchResponse["results"][number]) => r.data
-          ) || []
-        );
-        setTotalRecords(typedSearchResults.total_results || 0);
+        const typedSearchResults = searchResults as QueryResult;
+        setProperties(typedSearchResults.properties || []);
+        setTotalRecords(typedSearchResults.total || 0);
       } else if (dataSource === "site" && currentSite) {
         console.log("[DataExplorer] Loading site data for:", currentSite);
-        const siteData = await dataApi.getSiteData(currentSite, {
+        const siteData = await apiClient.getSiteData(currentSite, {
           limit: 100,
-          source: "cleaned",
         });
         console.log("[DataExplorer] Site data:", siteData);
         const typedSiteData = siteData as {
@@ -109,7 +104,7 @@ export default function DataExplorer() {
       } else {
         // Master data
         console.log("[DataExplorer] Loading master data");
-        const masterData = await dataApi.getMasterData({ limit: 100 });
+        const masterData = await apiClient.getMasterData({ limit: 100 });
         console.log(
           "[DataExplorer] Master workbook response:",
           JSON.stringify(masterData, null, 2)

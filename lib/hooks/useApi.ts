@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ApiError } from "../api";
+// import { ApiError } from "../api";
 
 interface UseApiState<T> {
   data: T | null;
@@ -9,7 +9,7 @@ interface UseApiState<T> {
 
 interface UseApiOptions {
   immediate?: boolean;
-  onError?: (error: ApiError) => void;
+  onError?: (error: any) => void;
 }
 
 export function useApi<T>(
@@ -57,8 +57,10 @@ export function useApi<T>(
     } catch (error) {
       if (!isMountedRef.current) return;
 
-      const errorMessage =
-        error instanceof ApiError ? error.message : "An error occurred";
+      let errorMessage = "An error occurred";
+      if (error && typeof error === "object" && "message" in error) {
+        errorMessage = (error as any).message || errorMessage;
+      }
       console.error("[useApi] Request failed:", errorMessage, error);
       setState((prev: UseApiState<T>) => ({
         ...prev,
@@ -66,7 +68,7 @@ export function useApi<T>(
         error: errorMessage,
       }));
 
-      if (optionsRef.current.onError && error instanceof ApiError) {
+      if (optionsRef.current.onError) {
         optionsRef.current.onError(error);
       }
     }
@@ -107,8 +109,10 @@ export function useApiMutation<T, P = unknown>(
         setLoading(false);
         return result;
       } catch (err) {
-        const errorMessage =
-          err instanceof ApiError ? err.message : "An error occurred";
+        let errorMessage = "An error occurred";
+        if (err && typeof err === "object" && "message" in err) {
+          errorMessage = (err as any).message || errorMessage;
+        }
         console.error("[useApiMutation] Mutation failed:", errorMessage, err);
         setError(errorMessage);
         setLoading(false);
@@ -181,8 +185,10 @@ export function usePolling<T>(
       } catch (error) {
         if (!isMountedRef.current) return;
 
-        const errorMessage =
-          error instanceof ApiError ? error.message : "An error occurred";
+        let errorMessage = "An error occurred";
+        if (error && typeof error === "object" && "message" in error) {
+          errorMessage = (error as any).message || errorMessage;
+        }
         console.error(
           `[usePolling] Poll #${currentPoll} failed:`,
           errorMessage,

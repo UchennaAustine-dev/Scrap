@@ -1,26 +1,25 @@
-// export interface User {
-//   id: string;
-//   name: string;
-//   email: string;
-//   role: "Admin" | "Editor" | "Viewer";
-//   status: "Active" | "Inactive";
-//   lastLogin: string;
-// }
-
-// export interface Site {
-//   site_key: string;
-//   name: string;
-//   url: string;
-//   enabled: boolean;
-//   parser: string;
-//   selected?: boolean;
-//   // Optional fields from backend
-//   category?: string;
-//   priority?: number;
-//   notes?: string;
-//   selectors?: Record<string, unknown>;
-//   pagination?: Record<string, unknown>;
-//   lagos_paths?: string[];
+export interface Property {
+  id?: string;
+  title: string;
+  price: number | string;
+  price_per_sqm?: number;
+  location: string;
+  bedrooms?: number | string;
+  bathrooms?: number | string;
+  type?: string;
+  source?: string;
+  timestamp?: string;
+  featured?: boolean;
+  newListing?: boolean;
+  openHouse?: boolean;
+  description?: string;
+  image?: string;
+  url?: string;
+  site_key?: string;
+  latitude?: number;
+  longitude?: number;
+  geocoded?: boolean;
+}
 //   list_paths?: string[];
 //   search_param?: string;
 //   overrides?: Record<string, unknown>;
@@ -47,29 +46,28 @@
 //   records: number;
 // }
 
-// export interface Property {
-//   id?: string;
-//   title: string;
-//   price: number | string;
-//   price_per_sqm?: number;
-//   location: string;
-//   bedrooms?: number | string;
-//   bathrooms?: number | string;
-//   type?: string;
-//   source?: string;
-//   timestamp?: string;
-//   featured?: boolean;
-//   newListing?: boolean;
-//   openHouse?: boolean;
-//   // Additional fields from backend
-//   description?: string;
-//   image?: string;
-//   url?: string;
-//   site_key?: string;
-//   latitude?: number;
-//   longitude?: number;
-//   geocoded?: boolean;
-// }
+export interface Property {
+  id?: string;
+  title: string;
+  price: number | string;
+  price_per_sqm?: number;
+  location: string;
+  bedrooms?: number | string;
+  bathrooms?: number | string;
+  type?: string;
+  source?: string;
+  timestamp?: string;
+  featured?: boolean;
+  newListing?: boolean;
+  openHouse?: boolean;
+  description?: string;
+  image?: string;
+  url?: string;
+  site_key?: string;
+  latitude?: number;
+  longitude?: number;
+  geocoded?: boolean;
+}
 
 export interface GlobalParameters {
   headless: boolean;
@@ -80,18 +78,18 @@ export interface GlobalParameters {
   exportFormat: string;
 }
 
-// export interface FilterState {
-//   keyword: string;
-//   location: string;
-//   priceRange: [number, number];
-//   bedrooms: number[];
-//   bathrooms: number[];
-//   propertyType: string;
-//   promoTags: string[];
-//   startDate: string;
-//   endDate: string;
-//   sourceSite: string;
-// }
+export interface FilterState {
+  keyword: string;
+  location: string;
+  priceRange: [number, number];
+  bedrooms: number[];
+  bathrooms: number[];
+  propertyType: string;
+  promoTags: string[];
+  startDate: string;
+  endDate: string;
+  sourceSite: string;
+}
 
 // // API Response Types
 // export interface ApiResponse<T = unknown> {
@@ -157,15 +155,15 @@ export interface SiteListResponse {
 //   data: Property[];
 // }
 
-// export interface SearchResponse {
-//   query: string;
-//   fields: string[];
-//   total_results: number;
-//   results: Array<{
-//     site_key: string;
-//     data: Property;
-//   }>;
-// }
+export interface SearchResponse {
+  query: string;
+  fields: string[];
+  total_results: number;
+  results: Array<{
+    site_key: string;
+    data: Property;
+  }>;
+}
 
 // export interface StatsResponse {
 //   total_sites: number;
@@ -254,53 +252,7 @@ export interface DateRange {
 // Property Types
 // ============================================================================
 
-export interface Property {
-  id?: string;
-  hash?: string;
-  title: string;
-  price: number;
-  price_formatted?: string;
-  location: string;
-  listing_url: string;
-  source: string;
-  scrape_timestamp: string;
-
-  // Property Details
-  property_type?: string;
-  bedrooms?: number;
-  bathrooms?: number;
-  toilets?: number;
-  bq?: number; // Boys' Quarters
-  land_size?: string;
-
-  // Financial
-  price_per_sqm?: number;
-  price_per_bedroom?: number;
-  initial_deposit?: number;
-  payment_plan?: string;
-  service_charge?: number;
-
-  // Legal/Promo
-  title_tag?: string;
-  promo_tags?: string[];
-  launch_timeline?: string;
-
-  // Contact
-  agent_name?: string;
-  contact_info?: string;
-
-  // Media
-  images?: string[];
-  coordinates?: {
-    lat: number;
-    lng: number;
-  };
-
-  // Quality & Duplicates
-  quality_score?: number;
-  is_duplicate?: boolean;
-  duplicate_of?: string;
-}
+// Removed duplicate Property type definition
 
 // ============================================================================
 // Site Types
