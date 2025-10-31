@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useApi } from "@/lib/hooks/useApi";
-import { statsApi } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import {
   RefreshCw,
   ArrowUpDown,
@@ -11,34 +11,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface SiteStat {
-  site_key: string;
-  name?: string;
-  total_scrapes?: number;
-  successful_scrapes?: number;
-  failed_scrapes?: number;
-  success_rate?: number;
-  avg_records_per_scrape?: number;
-  total_records?: number;
-  avg_scrape_duration?: number;
-  last_scrape?: string;
-  last_success?: string;
-  error_count?: number;
-  health_score?: number;
-}
+import { SiteStats } from "@/lib/types";
 
 export function SiteStatistics() {
   console.log("[SiteStatistics] Component mounted/updated");
 
-  const { data, refetch } = useApi<SiteStat[] | { sites: SiteStat[] }>(() =>
-    statsApi.getSiteStats()
-  );
-
-  const stats = useMemo(() => {
-    if (Array.isArray(data)) return data as SiteStat[];
-    return ((data as unknown as { sites?: SiteStat[] })?.sites ||
-      []) as SiteStat[];
-  }, [data]);
+  const { data, refetch } = useApi<SiteStats[]>(() => apiClient.getSiteStats());
+  const stats = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 
   console.log("[SiteStatistics] Stats data:", {
     statsCount: stats.length,
@@ -48,10 +27,9 @@ export function SiteStatistics() {
   type SortKey =
     | "name"
     | "success_rate"
-    | "total_records"
-    | "avg_records_per_scrape"
-    | "error_count"
-    | "last_success";
+    | "total_listings"
+    | "average_price"
+    | "listings_24h";
   const [sortKey, setSortKey] = useState<SortKey>("success_rate");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
@@ -64,22 +42,12 @@ export function SiteStatistics() {
 
   const sortedStats = useMemo(() => {
     const arr = [...stats];
-    const getVal = (s: SiteStat, key: SortKey) => {
+    const getVal = (s: SiteStats, key: SortKey) => {
       if (key === "name") return (s.name || s.site_key || "").toLowerCase();
-      if (key === "last_success")
-        return s.last_success ? new Date(s.last_success).getTime() : 0;
-      const numericKeys: Array<Exclude<SortKey, "name" | "last_success">> = [
-        "success_rate",
-        "total_records",
-        "avg_records_per_scrape",
-        "error_count",
-      ];
-      if (
-        numericKeys.includes(key as Exclude<SortKey, "name" | "last_success">)
-      ) {
-        const val = s[key as keyof SiteStat];
-        return Number(val ?? 0);
-      }
+      if (key === "total_listings") return s.total_listings ?? 0;
+      if (key === "average_price") return s.average_price ?? 0;
+      if (key === "listings_24h") return s.listings_24h ?? 0;
+      if (key === "success_rate") return s.success_rate ?? 0;
       return 0;
     };
     arr.sort((a, b) => {
@@ -198,40 +166,30 @@ export function SiteStatistics() {
               <th className="text-left py-2 pr-4">
                 <button
                   className="inline-flex items-center gap-1 hover:text-slate-200"
-                  onClick={() => toggleSort("total_records")}
-                  title="Sort by total records"
+                  onClick={() => toggleSort("total_listings")}
+                  title="Sort by total listings"
                 >
-                  Total Records
+                  Listings
                   <ArrowUpDown className="w-3.5 h-3.5" />
                 </button>
               </th>
               <th className="text-left py-2 pr-4">
                 <button
                   className="inline-flex items-center gap-1 hover:text-slate-200"
-                  onClick={() => toggleSort("avg_records_per_scrape")}
-                  title="Sort by average per run"
+                  onClick={() => toggleSort("average_price")}
+                  title="Sort by average price"
                 >
-                  Avg/Run
+                  Avg Price
                   <ArrowUpDown className="w-3.5 h-3.5" />
                 </button>
               </th>
               <th className="text-left py-2 pr-4">
                 <button
                   className="inline-flex items-center gap-1 hover:text-slate-200"
-                  onClick={() => toggleSort("error_count")}
-                  title="Sort by errors"
+                  onClick={() => toggleSort("listings_24h")}
+                  title="Sort by 24h listings"
                 >
-                  Errors
-                  <ArrowUpDown className="w-3.5 h-3.5" />
-                </button>
-              </th>
-              <th className="text-left py-2 pr-4">
-                <button
-                  className="inline-flex items-center gap-1 hover:text-slate-200"
-                  onClick={() => toggleSort("last_success")}
-                  title="Sort by last success"
-                >
-                  Last Success
+                  24h Listings
                   <ArrowUpDown className="w-3.5 h-3.5" />
                 </button>
               </th>
@@ -239,33 +197,40 @@ export function SiteStatistics() {
           </thead>
           <tbody>
             {pageRows && pageRows.length > 0 ? (
-              pageRows.map((s: SiteStat) => (
+              pageRows.map((s: SiteStats) => (
                 <tr key={s.site_key} className="border-b border-slate-800">
-                  <td className="py-2 pr-4 text-slate-300">
+                  <td className="py-2 pr-4 text-slate-300 font-semibold">
                     {s.name || s.site_key}
                   </td>
-                  <td className="py-2 pr-4 text-slate-300">
-                    {(s.success_rate ?? 0).toFixed(1)}%
+                  <td className="py-2 pr-4">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-bold ${
+                        s.success_rate > 80
+                          ? "bg-green-700 text-green-200"
+                          : s.success_rate > 50
+                          ? "bg-yellow-700 text-yellow-200"
+                          : "bg-red-700 text-red-200"
+                      }`}
+                    >
+                      {(s.success_rate ?? 0).toFixed(1)}%
+                    </span>
+                  </td>
+                  <td className="py-2 pr-4 text-blue-300 font-bold">
+                    {s.total_listings ?? 0}
                   </td>
                   <td className="py-2 pr-4 text-slate-300">
-                    {s.total_records ?? 0}
-                  </td>
-                  <td className="py-2 pr-4 text-slate-300">
-                    {s.avg_records_per_scrape ?? 0}
-                  </td>
-                  <td className="py-2 pr-4 text-red-400">
-                    {s.error_count ?? 0}
-                  </td>
-                  <td className="py-2 pr-4 text-slate-300">
-                    {s.last_success
-                      ? new Date(s.last_success).toLocaleString()
+                    {s.average_price
+                      ? `₦${s.average_price.toLocaleString()}`
                       : "-"}
+                  </td>
+                  <td className="py-2 pr-4 text-purple-300">
+                    {s.listings_24h ?? 0}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="py-4 text-slate-400">
+                <td colSpan={5} className="py-4 text-slate-400 text-center">
                   No site statistics available.
                 </td>
               </tr>

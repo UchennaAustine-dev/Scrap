@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { usePolling, useApi } from "@/lib/hooks/useApi";
-import { logsApi } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -20,7 +20,7 @@ export function SiteLogsModal({
 }: SiteLogsModalProps) {
   const getSiteLogs = useCallback((): Promise<Log[] | { logs?: Log[] }> => {
     if (!siteKey) return Promise.resolve([] as Log[]);
-    return logsApi.getSiteLogs(siteKey, 200) as Promise<
+    return apiClient.getSiteLogs(siteKey, 200) as Promise<
       Log[] | { logs?: Log[] }
     >;
   }, [siteKey]);
@@ -33,9 +33,9 @@ export function SiteLogsModal({
   );
 
   // Use stable function reference for manual refetch with proper dependencies
-  const getRefetchLogs = useCallback(() => {
-    if (!siteKey) return Promise.resolve([]);
-    return logsApi.getSiteLogs(siteKey, 200);
+  const getRefetchLogs = useCallback(async () => {
+    if (!siteKey) return { logs: [] };
+    return await apiClient.getSiteLogs(siteKey, 200);
   }, [siteKey]);
 
   const { refetch } = useApi(getRefetchLogs, {

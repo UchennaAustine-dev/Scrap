@@ -9,33 +9,36 @@ import { TrendsChart } from "./trends-chart";
 import { SiteStatistics } from "./site-statistics";
 import { useApi, usePolling } from "@/lib/hooks/useApi";
 import { useCallback } from "react";
-import { statsApi, scrapeApi, sitesApi } from "@/lib/api";
-import { StatsResponse, ScrapeStatus, SiteListResponse } from "@/lib/types";
+import { apiClient } from "@/lib/api";
+import { OverviewStats, ScrapeStatus, Site, SiteStats } from "@/lib/types";
 import { toast } from "sonner";
 
 export function DashboardOverview() {
   console.log("[DashboardOverview] Component mounted/updated");
 
   // Get stats data
-  const { data: stats, refetch: refetchStats } = useApi<StatsResponse>(
-    async () => statsApi.getOverview() as Promise<StatsResponse>
+  const { data: stats, refetch: refetchStats } = useApi<OverviewStats>(
+    async () => apiClient.getOverviewStats()
   );
 
   // Poll for scraper status with stable function reference
   const getScrapeStatus = useCallback(
-    async () => scrapeApi.status() as Promise<ScrapeStatus>,
+    async () => apiClient.getScrapeStatus(),
     []
   );
   const { data: scrapeStatus } = usePolling<ScrapeStatus>(
     getScrapeStatus,
-    10000, // Poll every 10 seconds to reduce load
+    10000,
     true
   );
 
   // Get sites data
-  const { data: sitesData, refetch: refetchSites } = useApi<SiteListResponse>(
-    async () => sitesApi.list() as Promise<SiteListResponse>
-  );
+  const { data: sitesData, refetch: refetchSites } = useApi<{
+    sites: Site[];
+    total: number;
+    enabled: number;
+    disabled: number;
+  }>(async () => apiClient.listSites());
 
   console.log("[DashboardOverview] Data loaded:", {
     stats,
@@ -50,9 +53,9 @@ export function DashboardOverview() {
     toast.success("Dashboard refreshed");
   };
 
-  const activeScrapers = scrapeStatus?.is_running ? 1 : 0;
-  const totalRecords = stats?.total_listings || 0;
-  const recentRuns = stats?.recent_runs || 0;
+  const activeScrapers = scrapeStatus?.status === "running" ? 1 : 0;
+  const totalRecords = stats?.overview?.total_listings || 0;
+  const recentRuns = stats?.overview?.active_sites || 0;
 
   return (
     <div className="space-y-6">

@@ -37,7 +37,7 @@ export function GlobalParameters({
     key: K,
     value: GlobalParametersType[K]
   ) => {
-    setParameters((prev) => ({ ...prev, [key]: value }));
+    setParameters((prev: GlobalParametersType) => ({ ...prev, [key]: value }));
 
     // Update parent component
     if (key === "maxPagesPerSite" && onMaxPagesChange) {

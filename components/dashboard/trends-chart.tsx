@@ -2,42 +2,26 @@
 
 import { useMemo } from "react";
 import { useApi } from "@/lib/hooks/useApi";
-import { statsApi } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
-interface TrendsPoint {
-  date: string;
-  total_records: number;
-  successful_runs: number;
-  failed_runs: number;
-}
+import { TrendStats } from "@/lib/types";
 
 export function TrendsChart() {
   console.log("[TrendsChart] Component mounted/updated");
 
-  const { data, refetch } = useApi<TrendsPoint[]>(() => statsApi.getTrends(7));
-
+  const { data, refetch } = useApi<TrendStats>(() =>
+    apiClient.getTrendStats(7)
+  );
   const chartData = useMemo(() => {
-    type RawPoint = Partial<{
-      date: string;
-      day: string;
-      total_records: number;
-      records: number;
-      successful_runs: number;
-      success: number;
-      failed_runs: number;
-      failed: number;
-    }>;
-    const arr: RawPoint[] = Array.isArray(data)
-      ? (data as RawPoint[])
-      : (data as unknown as { points?: RawPoint[] })?.points || [];
-    return arr.map((d) => ({
-      date: d.date || d.day || "",
-      records: d.total_records ?? d.records ?? 0,
-      success: d.successful_runs ?? d.success ?? 0,
-      failed: d.failed_runs ?? d.failed ?? 0,
+    if (!data || !data.trends) return [];
+    return data.trends.map((d) => ({
+      date: d.date,
+      records: d.listings,
+      sites: d.sites,
+      avg_price: d.avg_price,
     }));
   }, [data]);
 
@@ -69,42 +53,51 @@ export function TrendsChart() {
         {chartData.length === 0 ? (
           <div className="text-slate-400">No trend data available.</div>
         ) : (
-          <div className="w-full overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-slate-400 border-b border-slate-700">
-                  <th className="text-left py-2 pr-4">Date</th>
-                  <th className="text-left py-2 pr-4">Records</th>
-                  <th className="text-left py-2 pr-4">Success</th>
-                  <th className="text-left py-2 pr-4">Failed</th>
-                </tr>
-              </thead>
-              <tbody>
-                {chartData.map(
-                  (
-                    row: {
-                      date: string;
-                      records: number;
-                      success: number;
-                      failed: number;
-                    },
-                    idx: number
-                  ) => (
+          <>
+            {/* Summary Section */}
+            {data?.summary && (
+              <div className="mb-4 flex flex-wrap gap-4 text-xs text-slate-400">
+                <span>Total Days: {data.summary.total_days}</span>
+                <span>
+                  Avg Daily Listings: {data.summary.avg_daily_listings}
+                </span>
+                {data.summary.peak_day && (
+                  <span>
+                    Peak: {data.summary.peak_day} ({data.summary.peak_listings}{" "}
+                    listings)
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-slate-400 border-b border-slate-700">
+                    <th className="text-left py-2 pr-4">Date</th>
+                    <th className="text-left py-2 pr-4">Listings</th>
+                    <th className="text-left py-2 pr-4">Sites</th>
+                    <th className="text-left py-2 pr-4">Avg Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {chartData.map((row, idx) => (
                     <tr key={idx} className="border-b border-slate-800">
                       <td className="py-2 pr-4 text-slate-300">{row.date}</td>
-                      <td className="py-2 pr-4 text-slate-300">
+                      <td className="py-2 pr-4 text-blue-300 font-bold">
                         {row.records}
                       </td>
-                      <td className="py-2 pr-4 text-green-400">
-                        {row.success}
+                      <td className="py-2 pr-4 text-green-300">{row.sites}</td>
+                      <td className="py-2 pr-4 text-slate-300">
+                        {row.avg_price
+                          ? `₦${row.avg_price.toLocaleString()}`
+                          : "-"}
                       </td>
-                      <td className="py-2 pr-4 text-red-400">{row.failed}</td>
                     </tr>
-                  )
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

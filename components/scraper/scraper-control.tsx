@@ -9,7 +9,7 @@ import { RunConsole } from "./run-console";
 import { NotificationsAlerts } from "./notifications-alerts";
 import { AddSiteModal } from "./add-site-modal";
 import { toast } from "sonner";
-import { scrapeApi } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import { usePolling } from "@/lib/hooks/useApi";
 import { ScrapeStatus } from "@/lib/types";
 
@@ -23,61 +23,32 @@ export function ScraperControl() {
   const [scrapeComplete, setScrapeComplete] = useState(false);
 
   // Poll for scraper status with stable function reference
-  const getScrapeStatus = useCallback(() => scrapeApi.status(), []);
+  const getScrapeStatus = useCallback(() => apiClient.getScrapeStatus(), []);
   const { data: scrapeStatus } = usePolling<ScrapeStatus>(
     getScrapeStatus,
-    5000, // Poll every 5 seconds to reduce load
+    5000,
     true
   );
 
-  const isRunning = scrapeStatus?.is_running || false;
+  const isRunning = scrapeStatus?.status === "running";
 
   // Track previous running state to detect completion
-  const previousIsRunningRef = useRef<boolean>(false);
-  const hasShownToastRef = useRef<boolean>(false);
-
-  // Detect scrape completion and show master workbook generation status
+  const previousStatusRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    // Only trigger if transitioning from running to not running
     if (
-      previousIsRunningRef.current &&
-      !isRunning &&
-      !hasShownToastRef.current
+      previousStatusRef.current === "running" &&
+      scrapeStatus?.status !== "running"
     ) {
-      const lastRun = scrapeStatus?.last_run;
-
-      if (lastRun) {
-        // Show master workbook generation status
-        if (lastRun.master_workbook_generated) {
-          toast.success("✅ Master workbook generated successfully", {
-            description: "All scraped data has been consolidated",
-            duration: 5000,
-          });
-        } else if (lastRun.master_workbook_error) {
-          toast.error("❌ Master workbook generation failed", {
-            description: lastRun.master_workbook_error,
-            duration: 7000,
-          });
-        } else {
-          // Scrape completed but master workbook status unknown
-          toast.info("ℹ️ Scrape completed", {
-            description: "Master workbook status unavailable",
-            duration: 4000,
-          });
-        }
-
-        hasShownToastRef.current = true;
-      }
+      toast.success("Scrape completed", {
+        description: `Total listings found: ${
+          scrapeStatus?.listings_found ?? 0
+        }`,
+        duration: 4000,
+      });
+      setScrapeComplete(true);
     }
-
-    // Update previous state
-    previousIsRunningRef.current = isRunning;
-
-    // Reset toast flag when scraper starts again
-    if (isRunning) {
-      hasShownToastRef.current = false;
-    }
-  }, [isRunning, scrapeStatus]);
+    previousStatusRef.current = scrapeStatus?.status;
+  }, [scrapeStatus]);
 
   console.log("[ScraperControl] Component mounted/updated");
   if (scrapeStatus) {
@@ -85,22 +56,6 @@ export function ScraperControl() {
       "[ScraperControl] Scraper status:",
       JSON.stringify(scrapeStatus, null, 2)
     );
-    console.log("[ScraperControl] is_running:", scrapeStatus.is_running);
-    if (scrapeStatus.current_run)
-      console.log(
-        "[ScraperControl] current_run:",
-        JSON.stringify(scrapeStatus.current_run, null, 2)
-      );
-    if (scrapeStatus.last_run)
-      console.log(
-        "[ScraperControl] last_run:",
-        JSON.stringify(scrapeStatus.last_run, null, 2)
-      );
-    if (scrapeStatus.site_metadata)
-      console.log(
-        "[ScraperControl] site_metadata:",
-        JSON.stringify(scrapeStatus.site_metadata, null, 2)
-      );
   } else {
     console.log("[ScraperControl] Scraper status: null");
   }
@@ -116,7 +71,7 @@ export function ScraperControl() {
     try {
       if (isRunning) {
         console.log("[ScraperControl] Stopping scraper...");
-        await scrapeApi.stop();
+        await apiClient.stopScrape();
         toast.success("Scraper stopped successfully");
         setScrapeLoading(false);
         setScrapeComplete(true);
@@ -124,14 +79,14 @@ export function ScraperControl() {
         const params: {
           sites?: string[];
           max_pages?: number;
-          geocoding?: boolean;
+          geocode?: boolean;
         } = {};
         if (selectedSites.length > 0) params.sites = selectedSites;
         if (maxPages !== undefined) params.max_pages = maxPages;
-        if (geocoding !== undefined) params.geocoding = geocoding;
+        if (geocoding !== undefined) params.geocode = geocoding;
 
         console.log("[ScraperControl] Starting scraper with params:", params);
-        await scrapeApi.start(params);
+        await apiClient.startScrape(params);
         toast.success("Scraper started successfully");
         // Poll for completion
         let pollCount = 0;
@@ -139,8 +94,8 @@ export function ScraperControl() {
         while (running && pollCount < 60) {
           // up to 5 min
           await new Promise((res) => setTimeout(res, 5000));
-          const status = await scrapeApi.status();
-          running = status?.is_running;
+          const status = await apiClient.getScrapeStatus();
+          running = status?.status === "running";
           pollCount++;
         }
         setScrapeLoading(false);
@@ -176,96 +131,78 @@ export function ScraperControl() {
         </div>
       </div>
 
-      {/* Running Status Banner */}
-      {isRunning && (
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 flex items-center gap-3">
-          <div className="flex-shrink-0">
-            <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-          </div>
-          <div className="flex-1">
-            <p className="text-blue-400 font-medium">Scraper is running</p>
-            <p className="text-blue-300 text-sm">
-              {scrapeStatus?.current_run?.sites
-                ? `Scraping: ${
-                    Array.isArray(scrapeStatus.current_run.sites)
-                      ? scrapeStatus.current_run.sites.join(", ")
-                      : scrapeStatus.current_run.sites
-                  }`
-                : "Check Run Console below for live logs"}
-            </p>
-          </div>
-          <div className="text-blue-400 text-sm">
-            {scrapeStatus?.current_run?.started_at && (
-              <span>
-                Started{" "}
-                {new Date(
-                  scrapeStatus.current_run.started_at
-                ).toLocaleTimeString()}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Last Run Status Banner */}
-      {!isRunning && scrapeStatus?.last_run && (
+      {/* Scraper Status Banner */}
+      {scrapeStatus && (
         <div
-          className={`${
-            scrapeStatus.last_run.success
+          className={`border rounded-lg p-4 ${
+            isRunning
+              ? "bg-blue-500/10 border-blue-500/30"
+              : scrapeStatus.status === "completed"
               ? "bg-green-500/10 border-green-500/30"
-              : "bg-red-500/10 border-red-500/30"
-          } border rounded-lg p-4`}
+              : scrapeStatus.status === "error"
+              ? "bg-red-500/10 border-red-500/30"
+              : "bg-slate-700/10 border-slate-700/30"
+          }`}
         >
-          <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              <div
+                className={`w-3 h-3 rounded-full ${
+                  isRunning
+                    ? "bg-blue-500 animate-pulse"
+                    : scrapeStatus.status === "completed"
+                    ? "bg-green-500"
+                    : scrapeStatus.status === "error"
+                    ? "bg-red-500"
+                    : "bg-slate-500"
+                }`}
+              ></div>
+            </div>
             <div className="flex-1">
               <p
-                className={`${
-                  scrapeStatus.last_run.success
+                className={`font-medium ${
+                  isRunning
+                    ? "text-blue-400"
+                    : scrapeStatus.status === "completed"
                     ? "text-green-400"
-                    : "text-red-400"
-                } font-medium`}
-              >
-                Last Run:{" "}
-                {scrapeStatus.last_run.success ? "Completed" : "Failed"}
-              </p>
-              <div className="mt-2 space-y-1 text-sm text-slate-300">
-                <p>
-                  Sites:{" "}
-                  {Array.isArray(scrapeStatus.last_run.sites)
-                    ? scrapeStatus.last_run.sites.join(", ")
-                    : scrapeStatus.last_run.sites}
-                </p>
-                <p>
-                  Started:{" "}
-                  {new Date(scrapeStatus.last_run.started_at).toLocaleString()}
-                </p>
-                <p>
-                  Completed:{" "}
-                  {new Date(
-                    scrapeStatus.last_run.completed_at
-                  ).toLocaleString()}
-                </p>
-                <p>
-                  Duration:{" "}
-                  {Math.round(
-                    (new Date(scrapeStatus.last_run.completed_at).getTime() -
-                      new Date(scrapeStatus.last_run.started_at).getTime()) /
-                      1000
-                  )}{" "}
-                  seconds
-                </p>
-              </div>
-            </div>
-            <div className="ml-4">
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  scrapeStatus.last_run.success
-                    ? "bg-green-500/20 text-green-400"
-                    : "bg-red-500/20 text-red-400"
+                    : scrapeStatus.status === "error"
+                    ? "text-red-400"
+                    : "text-slate-400"
                 }`}
               >
-                {scrapeStatus.last_run.success ? "Success" : "Failed"}
-              </span>
+                Status:{" "}
+                {scrapeStatus.status.charAt(0).toUpperCase() +
+                  scrapeStatus.status.slice(1)}
+              </p>
+              <div className="mt-2 space-y-1 text-sm text-slate-300">
+                {scrapeStatus.current_site && (
+                  <p>Current Site: {scrapeStatus.current_site}</p>
+                )}
+                {typeof scrapeStatus.sites_completed === "number" &&
+                  typeof scrapeStatus.sites_total === "number" && (
+                    <p>
+                      Sites: {scrapeStatus.sites_completed} /{" "}
+                      {scrapeStatus.sites_total}
+                    </p>
+                  )}
+                {typeof scrapeStatus.listings_found === "number" && (
+                  <p>Listings Found: {scrapeStatus.listings_found}</p>
+                )}
+                {scrapeStatus.start_time && (
+                  <p>
+                    Started:{" "}
+                    {new Date(scrapeStatus.start_time).toLocaleString()}
+                  </p>
+                )}
+                {scrapeStatus.estimated_completion && (
+                  <p>
+                    Estimated Completion: {scrapeStatus.estimated_completion}
+                  </p>
+                )}
+                {typeof scrapeStatus.progress_percentage === "number" && (
+                  <p>Progress: {scrapeStatus.progress_percentage}%</p>
+                )}
+              </div>
             </div>
           </div>
         </div>

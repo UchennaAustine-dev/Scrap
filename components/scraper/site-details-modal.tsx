@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useApi, useApiMutation } from "@/lib/hooks/useApi";
-import { sitesApi } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import { Site } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -24,11 +24,11 @@ export function SiteDetailsModal({
   onSaved,
 }: SiteDetailsModalProps) {
   const { data, refetch, loading, error } = useApi<Site | { site: Site }>(
-    () => sitesApi.get(siteKey || ""),
+    () => apiClient.getSite(siteKey || ""),
     { immediate: false }
   );
   const updateMutation = useApiMutation((updates: Partial<Site>) =>
-    sitesApi.update(siteKey || "", updates)
+    apiClient.updateSite(siteKey || "", updates)
   );
 
   const site: Site | undefined = useMemo(() => {

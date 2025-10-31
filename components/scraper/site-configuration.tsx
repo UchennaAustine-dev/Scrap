@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getStatusColor } from "@/lib/utils";
 import { toast } from "sonner";
-import { sitesApi } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import { useApi, useApiMutation } from "@/lib/hooks/useApi";
 import { SiteListResponse } from "@/lib/types";
 import {
@@ -89,7 +89,7 @@ export function SiteConfiguration({
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
 
   // Create a stable function reference for the API call
-  const getSites = useCallback(() => sitesApi.list(), []);
+  const getSites = useCallback(() => apiClient.listSites(), []);
 
   const {
     data: sitesData,
@@ -120,7 +120,7 @@ export function SiteConfiguration({
   useEffect(() => {
     const filteredLength = showDisabled
       ? allSites.length
-      : allSites.filter((site) => site.enabled).length;
+      : allSites.filter((site: any) => site.enabled).length;
     const maxPages = Math.max(1, Math.ceil(filteredLength / PAGE_SIZE));
     if (page > maxPages) {
       setPage(1);
@@ -147,7 +147,7 @@ export function SiteConfiguration({
   // Filter sites based on showDisabled toggle
   const filteredSites = showDisabled
     ? allSites
-    : allSites.filter((site) => site.enabled);
+    : allSites.filter((site: any) => site.enabled);
   // Pagination logic
   const totalPages = Math.max(1, Math.ceil(filteredSites.length / PAGE_SIZE));
   const pagedSites = filteredSites.slice(
@@ -158,8 +158,8 @@ export function SiteConfiguration({
   // Aggregate selection state for the header select-all checkbox
   const allChecked =
     pagedSites.length > 0 &&
-    pagedSites.every((site) => selectedSites.includes(site.site_key));
-  const someChecked = pagedSites.some((site) =>
+    pagedSites.every((site: any) => selectedSites.includes(site.site_key));
+  const someChecked = pagedSites.some((site: any) =>
     selectedSites.includes(site.site_key)
   );
 
@@ -191,7 +191,10 @@ export function SiteConfiguration({
     setActionError(null);
     setActionSuccess(null);
     try {
-      await sitesApi.toggle(siteKey);
+      const site = allSites.find((s: any) => s.site_key === siteKey);
+      if (site) {
+        await apiClient.toggleSite(siteKey, !site.enabled);
+      }
       setActionSuccess("Site status updated");
       toast.success("Site status updated");
       refetch();
@@ -206,7 +209,7 @@ export function SiteConfiguration({
     setActionError(null);
     setActionSuccess(null);
     try {
-      await sitesApi.delete(siteKey);
+      await apiClient.deleteSite(siteKey);
       setActionSuccess("Site deleted successfully");
       toast.success("Site deleted successfully");
       refetch();
@@ -224,7 +227,7 @@ export function SiteConfiguration({
     setActionSuccess(null);
     try {
       for (const key of selectedSites) {
-        const site = allSites.find((s) => s.site_key === key);
+        const site = allSites.find((s: any) => s.site_key === key);
         if (site && !site.enabled) {
           await toggleSiteMutation.mutate(key);
         }
@@ -244,7 +247,7 @@ export function SiteConfiguration({
     setActionSuccess(null);
     try {
       for (const key of selectedSites) {
-        const site = allSites.find((s) => s.site_key === key);
+        const site = allSites.find((s: any) => s.site_key === key);
         if (site && site.enabled) {
           await toggleSiteMutation.mutate(key);
         }
@@ -572,7 +575,7 @@ export function SiteConfiguration({
       {/* Mobile Card View */}
       <div className="block sm:hidden">
         <div className="divide-y divide-slate-700">
-          {pagedSites.map((site) => (
+          {pagedSites.map((site: any) => (
             <div key={site.site_key} className="p-4 space-y-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3 flex-1 min-w-0">
@@ -713,17 +716,17 @@ export function SiteConfiguration({
                   type="checkbox"
                   checked={
                     pagedSites.length > 0 &&
-                    pagedSites.every((site) =>
+                    pagedSites.every((site: any) =>
                       selectedSites.includes(site.site_key)
                     )
                   }
                   aria-checked={
                     pagedSites.length > 0 &&
-                    pagedSites.every((site) =>
+                    pagedSites.every((site: any) =>
                       selectedSites.includes(site.site_key)
                     )
                       ? "true"
-                      : pagedSites.some((site) =>
+                      : pagedSites.some((site: any) =>
                           selectedSites.includes(site.site_key)
                         )
                       ? "mixed"
@@ -734,14 +737,16 @@ export function SiteConfiguration({
                       const newSelected = Array.from(
                         new Set([
                           ...selectedSites,
-                          ...pagedSites.map((site) => site.site_key),
+                          ...pagedSites.map((site: any) => site.site_key),
                         ])
                       );
                       onSelectedSitesChange(newSelected);
                     } else {
                       const newSelected = selectedSites.filter(
                         (key) =>
-                          !pagedSites.map((site) => site.site_key).includes(key)
+                          !pagedSites
+                            .map((site: any) => site.site_key)
+                            .includes(key)
                       );
                       onSelectedSitesChange(newSelected);
                     }
@@ -769,7 +774,7 @@ export function SiteConfiguration({
             </tr>
           </thead>
           <tbody>
-            {pagedSites.map((site) => (
+            {pagedSites.map((site: any) => (
               <tr
                 key={site.site_key}
                 className="border-b border-slate-700 hover:bg-slate-700/50 cursor-pointer transition-all focus-within:bg-slate-700/80 outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
