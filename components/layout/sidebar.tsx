@@ -41,6 +41,13 @@ const navigation = [
     badge: "2 active",
   },
   {
+    name: "Data Explorer",
+    icon: Search,
+    id: "data",
+    description: "Browse scraped data",
+    badge: null,
+  },
+  {
     name: "Scraper Status",
     icon: Activity,
     id: "status",
@@ -87,13 +94,6 @@ const navigation = [
     icon: Database,
     id: "site-health",
     description: "Check site health",
-    badge: null,
-  },
-  {
-    name: "Data Explorer",
-    icon: Search,
-    id: "data",
-    description: "Browse scraped data",
     badge: null,
   },
   {

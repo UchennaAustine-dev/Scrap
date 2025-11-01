@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Header } from "@/components/layout/header";
 import { DashboardOverview } from "./dashboard-overview";
 import { ScraperControl } from "@/components/scraper/scraper-control";
 import { UserManagement } from "@/components/user/user-management";
@@ -111,29 +109,17 @@ export function Dashboard() {
   }, [currentPageConfig, isTransitioning]);
 
   return (
-    <div className="flex h-screen bg-slate-900 overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar currentPage={currentPage} onPageChange={handlePageChange} />
+    <div className="flex-1 flex flex-col min-h-0">
+      {/* Main content with proper scrolling */}
+      <main className="flex-1 overflow-auto">
+        <div className="p-6">{renderCurrentPage}</div>
+      </main>
 
-      {/* Main content area */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-0">
-        {/* Header with breadcrumb info */}
-        <Header
-          title={currentPageConfig.title}
-          description={currentPageConfig.description}
-        />
-
-        {/* Main content with proper scrolling */}
-        <main className="flex-1 overflow-auto">
-          <div className="p-6">{renderCurrentPage}</div>
-        </main>
-
-        {/* Optional: Page-specific actions bar */}
-        <div className="border-t border-slate-700 bg-slate-800/50 px-6 py-3">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>Page: {currentPageConfig.title}</span>
-            <span>Last updated: {new Date().toLocaleTimeString()}</span>
-          </div>
+      {/* Optional: Page-specific actions bar */}
+      <div className="border-t border-slate-700 bg-slate-800/50 px-6 py-3">
+        <div className="flex items-center justify-between text-xs text-slate-400">
+          <span>Page: {currentPageConfig.title}</span>
+          <span>Last updated: {new Date().toLocaleTimeString()}</span>
         </div>
       </div>
     </div>

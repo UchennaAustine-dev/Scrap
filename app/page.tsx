@@ -12,13 +12,30 @@ import { toast } from "sonner";
 
 // Dynamic import helper for new pages
 const DynamicPage = ({ page }: { page: string }) => {
-  const PageComponent = React.lazy(() => import(`./${page}/page`));
+  const PageComponent = React.lazy(() =>
+    import(`./${page}/page`).catch((err) => {
+      console.error(`Failed to load page: ${page}`, err);
+      return {
+        default: () => (
+          <div className="p-8 text-white">
+            <h1 className="text-2xl font-bold mb-4">Page Not Found</h1>
+            <p>Could not load page: {page}</p>
+          </div>
+        ),
+      };
+    })
+  );
   return <PageComponent />;
 };
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("login");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Debug: Track activeTab changes
+  React.useEffect(() => {
+    console.log("[Home] activeTab changed to:", activeTab);
+  }, [activeTab]);
 
   const handleLogin = useCallback(() => {
     setIsAuthenticated(true);
@@ -35,7 +52,6 @@ export default function Home() {
   const handlePageChange = useCallback((page: string) => {
     console.log("[Home] Page change requested:", page);
     setActiveTab(page);
-    console.log("[Home] Active tab set to:", page);
   }, []);
 
   // Move renderContent before conditional return to maintain hook order
@@ -53,24 +69,131 @@ export default function Home() {
       case "users":
         return <UserManagement />;
       case "rate-limit":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="rate-limit" />
+          </React.Suspense>
+        );
       case "price-intelligence":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="price-intelligence" />
+          </React.Suspense>
+        );
       case "market-trends":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="market-trends" />
+          </React.Suspense>
+        );
       case "search":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="search" />
+          </React.Suspense>
+        );
       case "saved-searches":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="saved-searches" />
+          </React.Suspense>
+        );
       case "export":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="export" />
+          </React.Suspense>
+        );
       case "firestore":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="firestore" />
+          </React.Suspense>
+        );
       case "github":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="github" />
+          </React.Suspense>
+        );
       case "duplicates":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="duplicates" />
+          </React.Suspense>
+        );
       case "quality":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="quality" />
+          </React.Suspense>
+        );
       case "schedule":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="schedule" />
+          </React.Suspense>
+        );
       case "health":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="health" />
+          </React.Suspense>
+        );
       case "email":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="email" />
+          </React.Suspense>
+        );
       case "alerts":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="alerts" />
+          </React.Suspense>
+        );
       case "top-performers":
+        return (
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="top-performers" />
+          </React.Suspense>
+        );
       case "site-health":
         return (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <DynamicPage page={activeTab} />
+          <React.Suspense
+            fallback={<div className="p-8 text-white">Loading...</div>}
+          >
+            <DynamicPage page="site-health" />
           </React.Suspense>
         );
       default:
@@ -91,10 +214,10 @@ export default function Home() {
         onLogout={handleLogout}
       />
 
-      <div className="flex-1 flex flex-col min-h-screen">
-        {/* <Header title={getPageTitle(activeTab)} /> */}
-
-        <main className="flex-1 overflow-auto">{renderContent()}</main>
+      <div className="flex-1 flex flex-col min-h-screen lg:ml-64">
+        <main className="flex-1 overflow-auto bg-slate-900" key={activeTab}>
+          {renderContent()}
+        </main>
       </div>
     </div>
   );
